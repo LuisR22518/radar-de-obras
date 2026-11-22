@@ -2,12 +2,25 @@
 
 LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalización de obra pública con los datos de **dIAra** (CGR y Universidad CENFOTEC). Proyecto integrador del curso BCD 8215 Visualización de datos, LEAD University, 2026.
 
-> Prototipo académico. No es una herramienta oficial de la Contraloría General de la República. Las detecciones son simuladas con el formato real de dIAra, y las obras y los contratistas están seudonimizados.
+> Prototipo académico. No es una herramienta oficial de la Contraloría General de la República. Usa los datos reales que dIAra publicó de su piloto (2024) y, a partir de ellos, obras simuladas con nombres y contratistas seudonimizados.
 
-LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene tres páginas:
+## Cómo está armado: tres capas de datos
+
+| Capa | Qué es | Quién la mantiene | Dónde vive |
+| --- | --- | --- | --- |
+| 1. dIAra | Detecciones de personas y máquinas por foto. Hoy: 8 días reales del piloto en la Escuela de Pococí (2024) | La Contraloría; nadie las edita a mano | `datos/diara/<cámara>/` |
+| 2. Simulado | Obras ficticias cuya cámara "ve" fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo | Se regenera en cada corrida (semilla fija) | `datos/simulados/` (no se guarda en el repositorio) |
+| 3. Registro de obras | Base de datos propia: obras, cámaras, contratos, avance, pagos, reportes ciudadanos y feriados | El gestor de datos, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1Zey5rfzLuPiH6Xd1-PE9OlXUl-skeG167_N86SsR0qY/edit) | `datos/registro/` (copia que GitHub actualiza cada hora) |
+
+El auditor solo lee. El gestor edita la hoja; cada hora GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora, recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Datos** dice qué corregir.
+
+Para conectar datos nuevos de dIAra no hay que cambiar código: se copia la carpeta de la cámara en `datos/diara/` (el adaptador `radar/diara.py` reconoce el CSV de producción y las etiquetas del piloto) y se registra la cámara en la hoja.
+
+LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene cuatro páginas:
 
 - **Qué revisar:** cuántas obras necesitan revisión, un mapa de Costa Rica y la lista en orden con la razón en palabras; búsqueda, descarga de la lista y, en paneles plegables, cómo se decide el orden, la importancia de cada señal y el cruce de riesgo y monto.
-- **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones y decisión con expediente descargable.
+- **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones (reales en la obra del piloto) y hallazgo y acción: criterio, condición, causa y efecto (NGASP 204), la acción elegida y su seguimiento, con expediente descargable.
+- **Datos:** de dónde sale cada dato de cada obra, la calidad del registro y los últimos cambios del gestor.
 - **Cómo funciona:** los pasos, las cinco señales, de dónde salen los datos y quién los mantiene, y los límites; el detalle técnico va plegado.
 
 ## Cómo correrlo en tu computadora
@@ -15,13 +28,14 @@ LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analiz
 Necesitas [Python 3.10 o más reciente](https://www.python.org/downloads/) y [Node.js 18 o más reciente](https://nodejs.org/).
 
 ```bash
-pip install -r requirements.txt   # pandas y numpy
+pip install -r requirements.txt   # pandas, numpy, openpyxl y pillow
 npm install                       # Observable Framework
 
-python scripts/generar_simulados.py   # datos simulados (siempre los mismos: semilla fija)
-python scripts/clima.py               # lluvia real de Open-Meteo (opcional; sin internet usa la simulada)
+python scripts/registro.py            # lee la hoja del registro (sin internet, usa la copia del repositorio)
+python scripts/generar_simulados.py   # obras simuladas a partir del piloto real (siempre las mismas: semilla fija)
+python scripts/clima.py               # lluvia real de Open-Meteo (sin internet usa la simulada)
 python scripts/construir.py           # calcula estados, señales y puntaje en salidas/
-python scripts/validar.py             # 16 pruebas de calidad y de escenarios
+python scripts/validar.py             # pruebas de calidad, de escenarios y de la obra real
 
 npm run dev    # abre el sitio en http://127.0.0.1:3000 y se actualiza al guardar
 npm run build  # genera el sitio estático en dist/
@@ -33,7 +47,7 @@ En Windows, si `python` no funciona, prueba con `py`.
 
 1. Crea un repositorio en GitHub y sube esta carpeta completa.
 2. En el repositorio, ve a **Settings → Pages** y en **Source** elige **GitHub Actions**.
-3. Cada vez que subas cambios a `main`, y todos los días a las 6:00, el flujo `.github/workflows/publicar.yml` recalcula los datos, corre las pruebas y publica el sitio. Si una prueba falla, no se publica.
+3. Cada vez que subas cambios a `main`, y cada hora, el flujo `.github/workflows/publicar.yml` lee la hoja del registro, recalcula los datos, corre las pruebas y publica el sitio. Si una prueba de calidad falla, no se publica.
 
 Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. Con GitHub Pro, gratis para estudiantes con el Student Developer Pack, el código puede quedar privado y el sitio seguir siendo visible.
 
@@ -41,19 +55,24 @@ Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. 
 
 ```
 datos/
-  obras.csv              8 obras seudonimizadas (editable: reemplázalas por datos reales)
-  eventos_contrato.csv   prórrogas, cambios de monto, suspensiones y recepciones
-  feriados.csv           feriados oficiales de 2026
-  simulados/             generados por scripts/generar_simulados.py
-    dIAra_crudo/CAM-X/   un CSV por cámara y día, en el formato de producción de dIAra
+  diara/dIAra-K1/        datos reales del piloto de dIAra, sin modificar (ver FUENTE.md)
+  registro/              copia de la hoja del gestor: obras, camaras, eventos_contrato,
+                         avance_reportado, pagos, reportes_ciudadanos, feriados y bitacora
+  simulados/             generados por scripts/generar_simulados.py (no se guardan en git)
 radar/
   config.py              todos los parámetros y umbrales en un solo lugar
-  lectura.py             lectura y limpieza (convierte los tensores de PyTorch en números)
+  diara.py               adaptador: lee los formatos reales de dIAra
+  registro.py            columnas, lectura y revisiones de calidad del registro
+  lectura.py             junta las tres capas
   contrato.py            plazo y monto vigentes, suspensiones y avance previsto
   reglas.py              estado diario, matriz semanal, señales, puntaje y alertas
-scripts/                 generar_simulados, clima, construir y validar
+scripts/
+  registro.py            lee la hoja de Google y guarda los cambios con su bitácora
+  hoja_registro.py       arma la hoja (con instrucciones y validaciones) desde datos/registro/
+  anonimizar_fotos.py    difumina a las personas en las fotos reales del piloto
+  generar_simulados.py, clima.py, construir.py, validar.py
 src/                     el sitio (Observable Framework)
-  data/*.py              cargadores: el sitio usa el mismo cálculo de Python
+  data/                  cargadores, mapa de Costa Rica y fotos del piloto anonimizadas
 salidas/                 resultados de construir.py (para revisar en Excel si quieres)
 ```
 
@@ -63,9 +82,10 @@ Todos los umbrales y pesos están en `radar/config.py`. Después de cambiarlos, 
 
 ## Fuentes
 
-- Repositorio de dIAra: https://github.com/cgrcostarica/dIAra (formato del CSV, clases, umbral, horario de captura y foto de muestra).
+- Repositorio de dIAra: https://github.com/cgrcostarica/dIAra (etiquetas y fotos del piloto, código de producción, firmware, clases, umbral y métricas).
 - Normas Generales de Auditoría para el Sector Público, R-DC-064-2014 (CGR).
-- Feriados 2026: calendario del Ministerio de Trabajo y Seguridad Social.
+- Feriados 2024 y 2026: Ministerio de Trabajo y Seguridad Social (incluye el traslado del 11 al 15 de abril de 2024, comunicado CP-018-2024).
+- Contorno de Costa Rica: Natural Earth (dominio público), vía world-atlas.
 - Lluvia: Open-Meteo, https://open-meteo.com/ (CC BY 4.0).
 - Observable Framework: https://observablehq.com/framework/
 

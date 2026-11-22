@@ -3,7 +3,7 @@ title: Qué revisar
 ---
 
 ```js
-import {Plot, grafico, fechaTexto, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
+import {Plot, grafico, fechaTexto, fechaLarga, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const pais = await FileAttachment("data/costa-rica.json").json();
@@ -48,8 +48,7 @@ const nReales = lista.filter(esReal).length;
 
 ```js
 function itemObra(o) {
-  const decision = leerDecision(o.obra_id);
-  const registrada = decision && decision.estado !== "Nueva" ? decision.estado : null;
+  const registrada = accionAbierta(o.obra_id) ? CORTO[leerDecision(o.obra_id).accion] : leerDecision(o.obra_id)?.accion === "Descartar" ? "Descartada" : null;
   return html`<li class=${`item ${o.estado}`} data-obra=${o.obra_id}>
     <a href=${`./obra.html?id=${o.obra_id}`}>
       ${iconoEstado(o.estado, o.orden)}
@@ -61,6 +60,29 @@ function itemObra(o) {
       ${registrada ? html`<span class="sello">${registrada}</span>` : ""}
     </a>
   </li>`;
+}
+// Acciones del auditor guardadas en este navegador (pestaña «Hallazgo y acción» de cada obra)
+const ABIERTAS = ["Solicitar información a la ejecutora", "Programar visita de campo", "Incluir en el plan de auditoría"];
+const CORTO = {"Solicitar información a la ejecutora": "Información solicitada", "Programar visita de campo": "Visita programada",
+               "Incluir en el plan de auditoría": "En el plan de auditoría"};
+const accionAbierta = (id) => ABIERTAS.includes(leerDecision(id)?.accion);
+function seguimiento() {
+  const abiertas = lista.filter((o) => accionAbierta(o.obra_id));
+  if (!abiertas.length) return "";
+  const hoy = new Date().toISOString().slice(0, 10);
+  return html`<section class="seguimiento" aria-labelledby="t-seguimiento">
+    <h2 id="t-seguimiento">Sus acciones abiertas <span class="tenue">${abiertas.length}</span></h2>
+    <ul>${abiertas.map((o) => {
+      const d = leerDecision(o.obra_id);
+      const foto = d.foto ?? {};
+      const estado = foto.fecha_corte === resumen.fecha_corte ? "Todavía no hay datos nuevos desde su decisión."
+        : o.racha_inactividad_dias < (foto.racha ?? 0) ? "Volvió a haber actividad desde su decisión."
+        : o.racha_inactividad_dias > 0 ? `Sigue sin actividad: ${plural(o.racha_inactividad_dias, "día hábil", "días hábiles")}.` : "Hay actividad.";
+      const vencida = d.fecha_seguimiento && d.fecha_seguimiento <= hoy;
+      return html`<li><a href=${`./obra.html?id=${o.obra_id}#decision`}>${o.orden}. ${o.nombre}</a>: ${CORTO[d.accion].toLowerCase()}${d.responsable ? `, a cargo de ${d.responsable}` : ""}.
+        ${d.fecha_seguimiento ? html`<span class=${vencida ? "vencida" : ""}>${vencida ? "Revisión pendiente desde el" : "Revisar el"} ${fechaLarga(d.fecha_seguimiento)}.</span>` : ""} ${estado}</li>`;
+    })}</ul>
+  </section>`;
 }
 function listaObras() {
   if (!visibles.length) return html`<p class="vacio">Ninguna obra coincide con «${texto}». Revise la ortografía o borre la búsqueda para ver todas.</p>`;
@@ -112,6 +134,7 @@ function descargarLista() {
       ${busqueda}
       ${html`<button class="boton secundario" type="button" onclick=${descargarLista}>Descargar lista</button>`}
     </div>
+    ${seguimiento()}
     ${listaObras()}
   </div>
 </div>

@@ -111,7 +111,7 @@ const sinDato = () => html`<span class="tenue">Sin dato</span>`;
 </section>
 
 ```js
-const PESTANAS = [["resumen", "Resumen"], ["actividad", "Actividad diaria"], ["avance", "Avance y pagos"], ["fotos", "Fotos"], ["decision", "Decisión"]];
+const PESTANAS = [["resumen", "Resumen"], ["actividad", "Actividad diaria"], ["avance", "Avance y pagos"], ["fotos", "Fotos"], ["decision", "Hallazgo y acción"]];
 const claves = PESTANAS.map(([k]) => k);
 const pestanas = html`<div class="pestanas" role="tablist" aria-label="Análisis de la obra">${PESTANAS.map(([k, t]) =>
   html`<button type="button" role="tab" id=${`t-${k}`} aria-controls=${`p-${k}`} data-k=${k}>${t}</button>`)}</div>`;
@@ -341,17 +341,49 @@ const imagenesDia = d3.groups(evObra.filter((d) => String(d.fecha_hora).startsWi
 const clave = `lupia-decision-${obraId}`;
 let guardado = null;
 try { guardado = JSON.parse(localStorage.getItem(clave) ?? "null"); } catch {}
-guardado ??= {estado: "Nueva", motivo: "", nota: ""};
+const ACCIONES = ["Sin acción todavía", "Solicitar información a la ejecutora", "Programar visita de campo", "Incluir en el plan de auditoría", "Descartar"];
+guardado = {accion: ACCIONES[0], motivo: "", causa: "", responsable: "", fecha_seguimiento: null, nota: "", ...(guardado ?? {})};
 const formDecision = Inputs.form({
-  estado: Inputs.radio(["Nueva", "En análisis", "Descartada", "Remitida"], {label: "Estado", value: guardado.estado}),
-  motivo: Inputs.select(["", "Feriado o lluvia", "Suspensión aprobada", "Falla de cámara", "Obra terminada", "Otro"], {label: "Motivo si se descarta", value: guardado.motivo}),
-  nota: Inputs.textarea({label: "Nota", value: guardado.nota, rows: 3, width: 480, placeholder: "Qué revisó y qué concluyó"})
+  causa: Inputs.textarea({label: "Causa", value: guardado.causa, rows: 2, width: 520, placeholder: "Por qué ocurre, según la ejecutora o la visita. Si aún no se sabe, déjelo vacío."}),
+  accion: Inputs.radio(ACCIONES, {label: "Acción", value: ACCIONES.includes(guardado.accion) ? guardado.accion : ACCIONES[0]}),
+  motivo: Inputs.select(["", "Feriado o lluvia", "Suspensión aprobada", "Falla de cámara", "Obra terminada", "Explicación de la ejecutora", "Otro"], {label: "Motivo, si descarta", value: guardado.motivo}),
+  responsable: Inputs.text({label: "Responsable", value: guardado.responsable, placeholder: "Quién da seguimiento"}),
+  fecha_seguimiento: Inputs.date({label: "Revisar de nuevo el", value: guardado.fecha_seguimiento}),
+  nota: Inputs.textarea({label: "Nota", value: guardado.nota, rows: 3, width: 520, placeholder: "Qué revisó, qué pidió y qué concluyó"})
 });
 const decision = Generators.input(formDecision);
+
+// Hallazgo preliminar: LupIA llena criterio, condición y efecto; la causa la determina el auditor (NGASP 204)
+const CRITERIO = {
+  inactividad: () => "Una obra en ejecución debería mostrar actividad en sus días hábiles. LupIA marca alerta desde 5 días hábiles seguidos sin personas ni máquinas, con la cámara funcionando.",
+  atraso: () => `El cronograma vigente prevé ${num(o.avance_previsto_pct)}\u00a0% de avance al ${fechaLarga(o.fecha_ultimo_informe)}.`,
+  brecha: () => "El avance que se reporta debería corresponder a semanas con actividad observada en la obra.",
+  contrato: () => "Los aumentos de monto y las prórrogas deben estar respaldados por un acto aprobado y justificado.",
+  ciudadania: () => "Los reportes ciudadanos deben atenderse y verificarse."
+};
+const alertasObra = razones(o).map((r) => r.clave);
+const criterio = alertasObra.length ? alertasObra.map((k) => CRITERIO[k]()) : ["Ninguna de las cinco señales pasa su límite."];
+const condicion = [
+  ...razones(o).map((r) => r.texto),
+  `Evidencia: ${plural(dias.filter((d) => d.estado !== "sin_datos").length, "día", "días")} con datos de la cámara${ultimoActivo ? `; último día con actividad, ${fechaLarga(ultimoActivo)}` : ""}. Fotos en la pestaña Fotos.`
+];
+const pagadoUltimo = serie.filter((d) => d.obra_id === obraId && d.serie === "pagado").sort((a, b) => a.fecha - b.fecha).at(-1);
+const diasAlFin = o.fecha_fin_vigente ? Math.round((o.fecha_fin_vigente - corte) / DIA) : null;
+const efecto = tieneDato(o.monto_vigente_crc) ? [
+  `Monto vigente en riesgo: ${millones(o.monto_vigente_crc)}${pagadoUltimo ? `, de los que ya se pagó ${num(pagadoUltimo.valor_pct, 0)}\u00a0% al ${fechaLarga(pagadoUltimo.fecha)}` : ""}.`,
+  diasAlFin != null ? (diasAlFin >= 0 ? `El contrato vence el ${fechaLarga(o.fecha_fin_vigente)}: faltan ${plural(diasAlFin, "día", "días")}.` : `El plazo venció el ${fechaLarga(o.fecha_fin_vigente)}.`) : null
+].filter(Boolean) : ["No hay contrato registrado para estimar el efecto. Pida el monto y el plazo a la ejecutora."];
 ```
 
 ```js
-try { localStorage.setItem(clave, JSON.stringify({...decision, actualizado: new Date().toISOString()})); } catch {}
+try {
+  localStorage.setItem(clave, JSON.stringify({
+    ...decision, fecha_seguimiento: decision.fecha_seguimiento ? decision.fecha_seguimiento.toISOString().slice(0, 10) : null,
+    actualizado: new Date().toISOString(),
+    // foto de la situación al decidir, para comparar después en «Sus acciones abiertas»
+    foto: {fecha_corte: resumen.fecha_corte, alertas: o.alertas ?? "", racha: o.racha_inactividad_dias, puntaje: Math.round(o.puntaje_vivo)}
+  }));
+} catch {}
 function expedienteCSV() {
   const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const filas = [
@@ -363,7 +395,11 @@ function expedienteCSV() {
     ["Puntaje de atención", o.puntaje], ["Número en la lista", o.orden],
     ...SENALES.map((s) => [`Señal: ${s.label}`, o[`senal_${s.key}`], `peso ${resumen.pesos[s.key]}`]),
     ["Razones", razones(o).map((r) => r.texto).join(" | ")], [],
-    ["Decisión del auditor", decision.estado], ["Motivo", decision.motivo], ["Nota", decision.nota], [],
+    ["Hallazgo preliminar (NGASP 204)"],
+    ["Criterio", criterio.join(" ")], ["Condición", condicion.join(" ")],
+    ["Causa", decision.causa || "Por determinar"], ["Efecto", efecto.join(" ")], [],
+    ["Acción", decision.accion], ["Motivo si se descarta", decision.motivo], ["Responsable", decision.responsable],
+    ["Revisar de nuevo el", decision.fecha_seguimiento ? decision.fecha_seguimiento.toISOString().slice(0, 10) : ""], ["Nota", decision.nota], [],
     ["Fecha", "Estado del día", "Cobertura de la cámara", "Fotos con actividad", "Contexto"],
     ...dias.map((d) => [d.fecha.toISOString().slice(0, 10), ESTADOS[d.estado].label, d.cobertura, d.pct_actividad, d.explicacion]),
     [], ["Metodología", "Sin datos si llega menos del 50 % de las fotos; actividad si 15 % o más de las fotos laborales tienen detecciones. Detalle en la página Metodología de LupIA."]
@@ -381,9 +417,17 @@ function descargar() {
 ```
 
 <section class="pestana registro" id="p-decision" role="tabpanel" aria-labelledby="t-decision" hidden>
-  <h2>¿Qué decide sobre esta obra?</h2>
-  <p>La decisión se guarda en este navegador y aparece en la lista. El expediente reúne los datos, las señales, la decisión y el estado de cada día, y sirve como papel de trabajo.</p>
+  <h2>¿Qué hace con esta obra?</h2>
+  <p>Este es el hallazgo preliminar, con sus cuatro atributos. LupIA llena lo que los datos permiten saber; la causa la determina usted con la ejecutora o en la visita.</p>
+  <dl class="hallazgo">
+    <div><dt>Criterio <span>Lo que debería ocurrir</span></dt><dd><ul>${criterio.map((t) => html`<li>${t}</li>`)}</ul></dd></div>
+    <div><dt>Condición <span>Lo que se observó</span></dt><dd><ul>${condicion.map((t) => html`<li>${t}</li>`)}</ul></dd></div>
+    <div><dt>Causa <span>Por qué ocurre</span></dt><dd>${decision.causa ? decision.causa : html`<span class="tenue">Por determinar. Escríbala abajo cuando la conozca.</span>`}</dd></div>
+    <div><dt>Efecto <span>Lo que está en riesgo</span></dt><dd><ul>${efecto.map((t) => html`<li>${t}</li>`)}</ul></dd></div>
+  </dl>
+  <h3>Decisión y seguimiento</h3>
   ${formDecision}
+  <p class="nota-tabla">Se guarda en este navegador. Las obras con una acción abierta aparecen en «Sus acciones abiertas», en la página de inicio.</p>
   <div class="lupia-acciones no-imprimir">
     ${html`<button class="boton" type="button" onclick=${descargar}>Descargar expediente</button>`}
     ${html`<button class="boton secundario" type="button" onclick=${() => window.print()}>Imprimir o guardar en PDF</button>`}
