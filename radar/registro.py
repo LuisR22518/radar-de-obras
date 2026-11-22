@@ -1,7 +1,7 @@
 """Registro de obras: la base de datos propia de LupIA.
 
-La mantiene el gestor de datos (no el auditor) en una hoja de Google con una pestaña por tabla;
-GitHub la descarga cada hora a datos/registro/ (ver scripts/registro.py). Aquí se define qué columnas
+La mantienen la gerencia y los encargados de actualización de obra (no el auditor) en una hoja de
+Google con una pestaña por tabla; GitHub la descarga cada 15 minutos a datos/registro/ (ver scripts/registro.py). Aquí se define qué columnas
 lleva cada tabla, cómo se leen y qué revisiones de calidad se le aplican.
 
 Dos niveles de problema:
@@ -24,38 +24,49 @@ TABLAS = {
         ("monto_original_crc", "numero", False), ("fecha_inicio", "fecha", False), ("fecha_fin_original", "fecha", False),
         ("fuente_datos", "opcion:dIAra real|simulado", True),
         ("escenario_simulado", "opcion:|" + "|".join(C.ESCENARIOS), False), ("escenario_desde", "fecha", False),
-        ("estado_registro", "opcion:activa|archivada", True), ("nota", "texto", False),
+        ("estado_registro", "opcion:activa|archivada", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
     ],
     "camaras": [
         ("camara_id", "texto", True), ("obra_id", "texto", True), ("desde", "fecha", True), ("hasta", "fecha", False),
-        ("inventario_fotos", "opcion:si|no", True), ("nota", "texto", False),
+        ("inventario_fotos", "opcion:si|no", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
     ],
     "eventos_contrato": [
         ("obra_id", "texto", True), ("fecha", "fecha", True),
         ("tipo", "opcion:modificacion_monto|prorroga|suspension|recepcion_provisional", True),
         ("detalle", "texto", True), ("dias_prorroga", "numero", False), ("monto_nuevo_crc", "numero", False),
-        ("suspension_desde", "fecha", False), ("suspension_hasta", "fecha", False), ("documento", "texto", False),
+        ("suspension_desde", "fecha", False), ("suspension_hasta", "fecha", False), ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
     "avance_reportado": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("avance_reportado_pct", "numero", True),
-        ("documento", "texto", False),
+        ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
     "pagos": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("pagado_acumulado_crc", "numero", True),
-        ("documento", "texto", False),
+        ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
     "reportes_ciudadanos": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("tipo", "texto", True), ("descripcion", "texto", True),
-        ("con_foto", "opcion:si|no", False), ("canal", "texto", False),
+        ("con_foto", "opcion:si|no", False), ("canal", "texto", False), ("actualizado_por", "texto", False),
     ],
-    "feriados": [("fecha", "fecha", True), ("nombre", "texto", True), ("fuente", "texto", False)],
+    "feriados": [("fecha", "fecha", True), ("nombre", "texto", True), ("fuente", "texto", False),
+                 ("actualizado_por", "texto", False)],
+    "responsables": [("nombre", "texto", True), ("cargo", "texto", True),
+                     ("rol", "opcion:gerencia|encargado_actualizacion", True), ("activo", "opcion:si|no", True)],
 }
+# Quién puede cambiar cada tabla: la gerencia (cargos sobre el auditor) mantiene la estructura del registro;
+# los encargados de actualización de obra cargan el seguimiento. El auditor solo lee, desde LupIA.
+PERMISOS = {"obras": {"gerencia"}, "camaras": {"gerencia"}, "feriados": {"gerencia"}, "responsables": {"gerencia"},
+            "eventos_contrato": {"gerencia", "encargado_actualizacion"},
+            "avance_reportado": {"gerencia", "encargado_actualizacion"},
+            "pagos": {"gerencia", "encargado_actualizacion"},
+            "reportes_ciudadanos": {"gerencia", "encargado_actualizacion"}}
+ROLES = {"gerencia": "Gerencia", "encargado_actualizacion": "Encargado de actualización de obra"}
 CLAVES = {"obras": ["obra_id"], "camaras": ["camara_id", "desde"], "eventos_contrato": ["obra_id", "fecha", "tipo"],
           "avance_reportado": ["obra_id", "fecha"], "pagos": ["obra_id", "fecha"],
-          "reportes_ciudadanos": ["obra_id", "fecha", "descripcion"], "feriados": ["fecha"]}
+          "reportes_ciudadanos": ["obra_id", "fecha", "descripcion"], "feriados": ["fecha"], "responsables": ["nombre"]}
 NOMBRES = {"obras": "Obras", "camaras": "Cámaras", "eventos_contrato": "Cambios de contrato",
            "avance_reportado": "Avance reportado", "pagos": "Pagos", "reportes_ciudadanos": "Reportes ciudadanos",
-           "feriados": "Feriados"}
+           "feriados": "Feriados", "responsables": "Responsables"}
 # Qué poner en cada columna (lo usan la pestaña LEEME de la hoja y la documentación)
 DESCRIPCIONES = {
     "obras": {
@@ -73,7 +84,7 @@ DESCRIPCIONES = {
         "escenario_simulado": "Solo obras simuladas: normal, paralizada, esporadica, lenta, falla_camara o terminada.",
         "escenario_desde": "Solo para paralizada, falla_camara y terminada: desde qué fecha.",
         "estado_registro": "activa: aparece en LupIA. archivada: se conserva pero no aparece.",
-        "nota": "Comentario libre del gestor.",
+        "nota": "Comentario libre.",
     },
     "camaras": {
         "camara_id": "Código de la cámara (por ejemplo, CAM-A). Debe coincidir con su carpeta de datos.",
@@ -106,7 +117,13 @@ DESCRIPCIONES = {
     },
     "feriados": {"fecha": "Fecha del feriado (la de su disfrute, si se trasladó).", "nombre": "Nombre del feriado.",
                  "fuente": "De dónde sale (por ejemplo, comunicado del MTSS)."},
+    "responsables": {"nombre": "Nombre de la persona que mantiene el registro.", "cargo": "Su cargo.",
+                     "rol": "gerencia: crea y cambia obras, cámaras y feriados. encargado_actualizacion: carga avance, pagos, cambios de contrato y reportes.",
+                     "activo": "si, mientras la persona tenga ese rol; no, cuando deje de tenerlo (no se borra, para conservar el historial)."},
 }
+for _tabla in DESCRIPCIONES:
+    if _tabla != "responsables":
+        DESCRIPCIONES[_tabla]["actualizado_por"] = "Quién hizo el último cambio en esta fila (de la pestaña responsables)."
 # Rectángulo que contiene a Costa Rica (con un margen): un punto fuera es casi seguro un error de digitación
 LAT_CR, LON_CR = (8.0, 11.3), (-86.0, -82.5)
 
@@ -274,6 +291,22 @@ def _revisar(t: dict, problemas: list):
             fin_anterior = c["hasta"]
         if pd.notna(c["hasta"]) and c["hasta"] < c["desde"]:
             problemas.append(Problema("error", "camaras", i + 2, "«hasta» es anterior a «desde»."))
+    resp = t["responsables"]
+    rol = dict(zip(resp["nombre"], resp["rol"]))
+    activos = set(resp.loc[resp["activo"] == "si", "nombre"])
+    for tabla in TABLAS:
+        if tabla == "responsables" or "actualizado_por" not in t[tabla].columns:
+            continue
+        for i, quien in t[tabla]["actualizado_por"].items():
+            if not quien:
+                problemas.append(Problema("aviso", tabla, i + 2, "Falta «actualizado_por»: no se sabe quién hizo el cambio."))
+            elif quien not in rol:
+                problemas.append(Problema("error", tabla, i + 2, f"«{quien}» no está en la pestaña responsables."))
+            elif rol[quien] not in PERMISOS[tabla]:
+                problemas.append(Problema("aviso", tabla, i + 2,
+                                          f"{quien} ({ROLES[rol[quien]].lower()}) cambió una tabla que corresponde a la gerencia."))
+            elif quien not in activos:
+                problemas.append(Problema("aviso", tabla, i + 2, f"{quien} ya no está activo como responsable."))
     av = t["avance_reportado"]
     for i in av.index[(av["avance_reportado_pct"] < 0) | (av["avance_reportado_pct"] > 100)]:
         problemas.append(Problema("error", "avance_reportado", i + 2, "El avance debe estar entre 0 y 100."))

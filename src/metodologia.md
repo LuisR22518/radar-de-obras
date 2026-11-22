@@ -46,10 +46,10 @@ LupIA trabaja con tres capas. El auditor solo lee; los datos los mantiene quien 
 | Capa | Qué contiene | Quién la mantiene | En este prototipo |
 | --- | --- | --- | --- |
 | dIAra | Detecciones de personas y máquinas por foto | La Contraloría (equipo de dIAra); nadie las edita | 8 días reales del piloto (2024) y 8 obras simuladas a partir de ellos |
-| Registro de obras | Obras, cámaras, contratos, avance, pagos, reportes y feriados | El gestor de datos, en una hoja de Google | Obras ficticias y seudonimizadas; feriados reales |
+| Registro de obras | Obras, cámaras, contratos, avance, pagos, reportes y feriados | La gerencia y los encargados de actualización de obra, en una hoja de Google | Obras ficticias y seudonimizadas; feriados reales |
 | Contexto | Lluvia diaria | Automático (Open-Meteo) | ${(([s]) => s.charAt(0).toUpperCase() + s.slice(1))([resumen.origen_clima.join(", ")])} |
 
-Cada hora, LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Quién cumple el rol de gestor dentro de la Contraloría está por confirmar con la institución.
+Cada 15 minutos, LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Qué cargos cumplen esos roles dentro de la Contraloría está por confirmar con la institución.
 
 ## Límites
 

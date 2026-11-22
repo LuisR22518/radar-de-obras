@@ -1,5 +1,9 @@
 """Lee el registro de obras desde la hoja de Google y actualiza datos/registro/.
 
+La hoja la mantienen la gerencia (obras, cámaras, feriados y responsables) y los encargados de
+actualización de obra (cambios de contrato, avance, pagos y reportes). Cada fila dice quién la
+actualizó; ese nombre queda en la bitácora junto con el valor anterior y el nuevo.
+
 Uso:  python scripts/registro.py                    descarga la hoja indicada en datos/registro/fuente.json
       python scripts/registro.py --archivo hoja.xlsx  usa un archivo descargado a mano (para probar)
 
@@ -45,18 +49,19 @@ def cambios(antes: dict, despues: dict, cuando: str) -> list:
     filas = []
     for tabla, cols in R.TABLAS.items():
         claves = R.CLAVES[tabla]
-        nombres = [c for c, _, _ in cols]
+        nombres = [c for c, _, _ in cols if c != "actualizado_por"]
         a = {tuple(f[k] for k in claves): f for f in antes[tabla].to_dict("records")}
         d = {tuple(f[k] for k in claves): f for f in despues[tabla].to_dict("records")}
+        quien = lambda f: f.get("actualizado_por", "")  # noqa: E731
         for clave in d.keys() - a.keys():
-            filas.append([cuando, tabla, " / ".join(clave), "(fila nueva)", "", ""])
+            filas.append([cuando, tabla, " / ".join(clave), "(fila nueva)", "", "", quien(d[clave])])
         for clave in a.keys() - d.keys():
-            filas.append([cuando, tabla, " / ".join(clave), "(fila eliminada)", "", ""])
+            filas.append([cuando, tabla, " / ".join(clave), "(fila eliminada)", "", "", quien(a[clave])])
         for clave in d.keys() & a.keys():
             for col in nombres:
                 va, vd = a[clave].get(col, ""), d[clave].get(col, "")
                 if va != vd:
-                    filas.append([cuando, tabla, " / ".join(clave), col, va, vd])
+                    filas.append([cuando, tabla, " / ".join(clave), col, va, vd, quien(d[clave])])
     return sorted(filas, key=lambda f: (f[1], f[2], f[3]))
 
 
@@ -91,6 +96,8 @@ def main():
     R.guardar(nuevo)
     if nuevas:
         bitacora = pd.read_csv(BITACORA, dtype=str, keep_default_na=False)
+        if "responsable" not in bitacora.columns:
+            bitacora["responsable"] = ""
         pd.concat([bitacora, pd.DataFrame(nuevas, columns=bitacora.columns)]).to_csv(BITACORA, index=False)
         (C.REGISTRO / "actualizado.txt").write_text(cuando + "\n", encoding="utf-8")
     INTENTO.write_text(json.dumps({"fecha_hora": cuando, "aceptado": True, "problemas": problemas},

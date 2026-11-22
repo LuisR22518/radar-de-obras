@@ -10,9 +10,9 @@ LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalizac
 | --- | --- | --- | --- |
 | 1. dIAra | Detecciones de personas y máquinas por foto. Hoy: 8 días reales del piloto en la Escuela de Pococí (2024) | La Contraloría; nadie las edita a mano | `datos/diara/<cámara>/` |
 | 2. Simulado | Obras ficticias cuya cámara "ve" fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo | Se regenera en cada corrida (semilla fija) | `datos/simulados/` (no se guarda en el repositorio) |
-| 3. Registro de obras | Base de datos propia: obras, cámaras, contratos, avance, pagos, reportes ciudadanos y feriados | El gestor de datos, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1Zey5rfzLuPiH6Xd1-PE9OlXUl-skeG167_N86SsR0qY/edit) | `datos/registro/` (copia que GitHub actualiza cada hora) |
+| 3. Registro de obras | Base de datos propia: obras, cámaras, contratos, avance, pagos, reportes ciudadanos y feriados | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza cada 15 minutos) |
 
-El auditor solo lee. El gestor edita la hoja; cada hora GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora, recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Datos** dice qué corregir.
+El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; cada 15 minutos GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Datos** dice qué corregir.
 
 Para conectar datos nuevos de dIAra no hay que cambiar código: se copia la carpeta de la cámara en `datos/diara/` (el adaptador `radar/diara.py` reconoce el CSV de producción y las etiquetas del piloto) y se registra la cámara en la hoja.
 
@@ -20,7 +20,7 @@ LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analiz
 
 - **Qué revisar:** cuántas obras necesitan revisión, un mapa de Costa Rica y la lista en orden con la razón en palabras; búsqueda, descarga de la lista y, en paneles plegables, cómo se decide el orden, la importancia de cada señal y el cruce de riesgo y monto.
 - **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones (reales en la obra del piloto) y hallazgo y acción: criterio, condición, causa y efecto (NGASP 204), la acción elegida y su seguimiento, con expediente descargable.
-- **Datos:** de dónde sale cada dato de cada obra, la calidad del registro y los últimos cambios del gestor.
+- **Datos:** de dónde sale cada dato de cada obra, quién mantiene el registro, su calidad, los últimos cambios y el estado público de cada obra.
 - **Cómo funciona:** los pasos, las cinco señales, de dónde salen los datos y quién los mantiene, y los límites; el detalle técnico va plegado.
 
 ## Cómo correrlo en tu computadora
@@ -47,7 +47,7 @@ En Windows, si `python` no funciona, prueba con `py`.
 
 1. Crea un repositorio en GitHub y sube esta carpeta completa.
 2. En el repositorio, ve a **Settings → Pages** y en **Source** elige **GitHub Actions**.
-3. Cada vez que subas cambios a `main`, y cada hora, el flujo `.github/workflows/publicar.yml` lee la hoja del registro, recalcula los datos, corre las pruebas y publica el sitio. Si una prueba de calidad falla, no se publica.
+3. Cada vez que subas cambios a `main`, y cada 15 minutos, el flujo `.github/workflows/publicar.yml` lee la hoja del registro, recalcula los datos, corre las pruebas y publica el sitio. Si una prueba de calidad falla, no se publica.
 
 Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. Con GitHub Pro, gratis para estudiantes con el Student Developer Pack, el código puede quedar privado y el sitio seguir siendo visible.
 
@@ -56,7 +56,7 @@ Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. 
 ```
 datos/
   diara/dIAra-K1/        datos reales del piloto de dIAra, sin modificar (ver FUENTE.md)
-  registro/              copia de la hoja del gestor: obras, camaras, eventos_contrato,
+  registro/              copia de la hoja del registro: obras, camaras, eventos_contrato,
                          avance_reportado, pagos, reportes_ciudadanos, feriados y bitacora
   simulados/             generados por scripts/generar_simulados.py (no se guardan en git)
 radar/

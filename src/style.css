@@ -421,3 +421,14 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
 .seguimiento .vencida { font-weight: 650; }
 .registro form label { line-height: 1.6; }
 .registro form div > label { margin: 0.15rem 1rem 0.15rem 0; }
+.selectores-fotos { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; }
+.selectores-fotos form { width: auto; }
+.dia-fotos { margin-top: 1.5rem; }
+.dia-fotos h3 { font-size: var(--t-md); margin: 0 0 0.25rem; }
+.dia-fotos h3 span { font-weight: 400; font-size: var(--t-sm); }
+.faltan { display: block; font-size: var(--t-xs); color: var(--grafito); margin-top: 0.15rem; }
+.tabla-dias { margin-top: 1rem; }
+.tabla-dias table { margin-top: 0.75rem; font-size: var(--t-sm); border-collapse: collapse; width: 100%; max-width: 52rem; }
+.tabla-dias th, .tabla-dias td { text-align: left; padding: 0.4rem 0.75rem 0.4rem 0; border-bottom: 1px solid var(--linea); }
+.tabla-dias thead th { border-bottom: 1.5px solid var(--tinta); color: var(--grafito); font-weight: 600; }
+.tabla-datos { border-collapse: collapse; }

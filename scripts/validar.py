@@ -3,7 +3,7 @@
 Uso:  python scripts/validar.py   (después de construir.py)
 
 Tres tipos de prueba:
-  1. Registro: la base de datos que mantiene el gestor no tiene errores.
+  1. Registro: la base de datos propia no tiene errores.
   2. Calidad de los datos de dIAra: clases, probabilidades, recuadros e integridad con el inventario.
   3. Escenarios: cada obra simulada produce la señal para la que fue diseñada, y la obra real del
      piloto se trata como histórica y con datos incompletos.
@@ -106,7 +106,7 @@ def main():
     for descripcion, ok in resultados:
         print(("OK    " if ok else "FALLA ") + descripcion)
     if omitidas:
-        print(f"OMITIDA pruebas de escenario de {', '.join(omitidas)}: el gestor cambió esas obras en el registro.")
+        print(f"OMITIDA pruebas de escenario de {', '.join(omitidas)}: esas obras cambiaron en el registro.")
     fallas = sum(not ok for _, ok in resultados)
     print(f"\n{len(resultados) - fallas} de {len(resultados)} pruebas pasaron.")
     sys.exit(1 if fallas else 0)

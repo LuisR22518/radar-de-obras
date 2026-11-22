@@ -56,6 +56,7 @@ function itemObra(o) {
         <span class="nombre">${o.estado === "revisar" ? html`<span class="marca">${o.nombre}</span>` : o.nombre}${esReal(o) ? html` <span class="etiqueta-real">Datos reales</span>` : ""}</span>
         <span class="lugar">${[o.canton, o.contratista, tieneDato(o.monto_vigente_crc) ? millones(o.monto_vigente_crc) : null].filter(Boolean).join(". ")}.</span>
         <span class="porque">${unirFrase(razonesCortas(o))}</span>
+        ${o.senales_con_dato < 5 && o.estado !== "historico" ? html`<span class="faltan">Faltan datos del contrato: su lugar se calculó con ${o.senales_con_dato} de 5 señales.</span>` : ""}
       </span>
       ${registrada ? html`<span class="sello">${registrada}</span>` : ""}
     </a>

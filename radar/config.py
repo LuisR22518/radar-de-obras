@@ -11,7 +11,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "datos"
 DIARA_REAL = DATOS / "diara"          # capa 1: lo que entrega dIAra, tal cual (una carpeta por cámara)
-REGISTRO = DATOS / "registro"         # capa 3: base de datos propia, la mantiene el gestor de datos
+REGISTRO = DATOS / "registro"         # capa 3: base de datos propia (gerencia y encargados de actualización)
 SIMULADOS = DATOS / "simulados"       # capa 2: generado a partir del piloto real (se regenera en cada corrida)
 DIARA_SIMULADO = SIMULADOS / "diara"  # mismo formato que producción: una carpeta por cámara, un CSV por día
 SALIDAS = RAIZ / "salidas"

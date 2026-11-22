@@ -1,16 +1,23 @@
-# Canal de datos automatizado: cada hora lee el registro de obras desde la hoja de Google,
+# Canal de datos automatizado: cada 15 minutos lee el registro de obras desde la hoja de Google,
 # recalcula LupIA y publica el sitio. También corre con cada cambio en el repositorio.
+# Los lunes a las 7:05 (hora de Costa Rica) envía el aviso semanal por Telegram, si está configurado.
 name: Recalcular y publicar LupIA
 
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "17 * * * *"   # cada hora, al minuto 17
-  workflow_dispatch: {}
+    - cron: "*/15 * * * *"   # cada 15 minutos
+    - cron: "5 13 * * 1"     # lunes 7:05 en Costa Rica (13:05 UTC): aviso semanal
+  workflow_dispatch:
+    inputs:
+      enviar_aviso:
+        description: "Enviar el aviso semanal por Telegram"
+        type: boolean
+        default: false
 
 permissions:
-  contents: write   # para guardar en el repositorio los cambios que el gestor hizo en la hoja
+  contents: write   # para guardar en el repositorio los cambios hechos en la hoja
   pages: write
   id-token: write
 
@@ -35,7 +42,7 @@ jobs:
             git config user.name "LupIA (registro)"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add datos/registro
-            git commit -m "Registro de obras: cambios del gestor desde la hoja"
+            git commit -m "Registro de obras: cambios desde la hoja"
             git pull --rebase
             git push
           fi
@@ -47,6 +54,13 @@ jobs:
         run: |
           python scripts/construir.py
           python scripts/validar.py
+      - name: Aviso semanal por Telegram (solo los lunes o si se pide)
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENVIAR: ${{ github.event.schedule == '5 13 * * 1' || inputs.enviar_aviso == true }}
+        run: |
+          if [ "$ENVIAR" = "true" ]; then python scripts/avisos.py --enviar; else python scripts/avisos.py; fi
       - uses: actions/setup-node@v4
         with:
           node-version: 20

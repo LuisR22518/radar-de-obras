@@ -1,7 +1,7 @@
 """Lectura de las tres capas de datos de LupIA.
 
   1. dIAra (datos/diara/ y datos/simulados/diara/): lo lee el adaptador radar/diara.py.
-  2. Registro (datos/registro/): la base de datos propia que mantiene el gestor; la lee radar/registro.py.
+  2. Registro (datos/registro/): la base de datos propia (gerencia y encargados de actualización); la lee radar/registro.py.
   3. Contexto externo: lluvia (Open-Meteo o simulada).
 """
 import pandas as pd

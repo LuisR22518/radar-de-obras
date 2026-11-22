@@ -1,21 +1,21 @@
-fecha,nombre,fuente
-2024-01-01,Año Nuevo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-03-28,Jueves Santo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-03-29,Viernes Santo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-04-15,Batalla de Rivas (trasladado del 11 de abril),"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-05-01,Día del Trabajador,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-08-15,Día de la Madre,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-09-15,Día de la Independencia,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2024-12-25,Navidad,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)"
-2026-01-01,Año Nuevo,Calendario de feriados 2026 del MTSS
-2026-04-02,Jueves Santo,Calendario de feriados 2026 del MTSS
-2026-04-03,Viernes Santo,Calendario de feriados 2026 del MTSS
-2026-04-11,Día de Juan Santamaría,Calendario de feriados 2026 del MTSS
-2026-05-01,Día del Trabajo,Calendario de feriados 2026 del MTSS
-2026-07-25,Anexión del Partido de Nicoya,Calendario de feriados 2026 del MTSS
-2026-08-02,Virgen de los Ángeles,Calendario de feriados 2026 del MTSS
-2026-08-15,Día de la Madre,Calendario de feriados 2026 del MTSS
-2026-08-31,Día de la Persona Negra y la Cultura Afrocostarricense,Calendario de feriados 2026 del MTSS
-2026-09-15,Independencia de Costa Rica,Calendario de feriados 2026 del MTSS
-2026-12-01,Abolición del Ejército,Calendario de feriados 2026 del MTSS
-2026-12-25,Navidad,Calendario de feriados 2026 del MTSS
+fecha,nombre,fuente,actualizado_por
+2024-01-01,Año Nuevo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-03-28,Jueves Santo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-03-29,Viernes Santo,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-04-15,Batalla de Rivas (trasladado del 11 de abril),"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-05-01,Día del Trabajador,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-08-15,Día de la Madre,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-09-15,Día de la Independencia,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2024-12-25,Navidad,"MTSS, feriados de pago obligatorio 2024 (comunicado CP-018-2024 para el traslado)",Equipo LupIA (carga inicial)
+2026-01-01,Año Nuevo,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-04-02,Jueves Santo,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-04-03,Viernes Santo,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-04-11,Día de Juan Santamaría,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-05-01,Día del Trabajo,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-07-25,Anexión del Partido de Nicoya,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-08-02,Virgen de los Ángeles,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-08-15,Día de la Madre,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-08-31,Día de la Persona Negra y la Cultura Afrocostarricense,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-09-15,Independencia de Costa Rica,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-12-01,Abolición del Ejército,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)
+2026-12-25,Navidad,Calendario de feriados 2026 del MTSS,Equipo LupIA (carga inicial)

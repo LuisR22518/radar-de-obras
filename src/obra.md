@@ -99,6 +99,7 @@ const sinDato = () => html`<span class="tenue">Sin dato</span>`;
       : html`<span class="etiqueta-simulada">Simulada</span> Lo que ve su cámara se arma con fotos reales del piloto de dIAra; el contrato y los informes son ficticios.`}</p>
     <h2>${o.estado === "revisar" ? "Por qué necesita revisión" : "Situación"}</h2>
     <ul class="razones">${porQue.map((r) => html`<li class=${r.explicada ? "explicada" : ""}>${r.texto}</li>`)}</ul>
+    ${o.senales_con_dato < 5 && o.estado !== "historico" ? html`<p class="faltan">Faltan datos del contrato: el orden se calculó con ${o.senales_con_dato} de 5 señales. Pida al encargado de la obra que complete el registro.</p>` : ""}
   </div>
   <dl class="datos-clave">
     <div><dt>Institución ejecutora</dt><dd>${o.institucion_ejecutora}</dd></div>
@@ -214,6 +215,20 @@ function lluvia(width) {
 
 ```js
 const eventosObra = eventos.filter((e) => e.obra_id === obraId).sort((a, b) => b.fecha - a.fecha);
+function tablaDias() {
+  const filas = [...dias].sort((a, b) => b.fecha - a.fecha);
+  return html`<table class="tabla-datos">
+    <caption class="sr-only">Estado de cada día con cámara, del más reciente al más antiguo</caption>
+    <thead><tr><th scope="col">Día</th><th scope="col">Estado</th><th scope="col">Fotos con actividad</th><th scope="col">Lluvia</th><th scope="col">Contexto</th></tr></thead>
+    <tbody>${filas.map((d) => html`<tr>
+      <td>${fechaLarga(d.fecha)}${d.es_habil ? "" : html` <span class="tenue">(no hábil)</span>`}</td>
+      <td>${ESTADOS[d.estado].label}</td>
+      <td>${d.estado === "sin_datos" ? "—" : `${num(100 * d.pct_actividad, 0)}\u00a0%`}</td>
+      <td>${d.lluvia_mm == null ? "—" : `${num(d.lluvia_mm)} mm`}</td>
+      <td>${[d.feriado, d.suspendido ? "suspensión aprobada" : "", d.explicacion && !d.feriado ? d.explicacion : ""].filter(Boolean).join("; ") || "—"}</td>
+    </tr>`)}</tbody>
+  </table>`;
+}
 ```
 
 <section class="pestana" id="p-actividad" role="tabpanel" aria-labelledby="t-actividad" hidden>
@@ -223,6 +238,10 @@ const eventosObra = eventos.filter((e) => e.obra_id === obraId).sort((a, b) => b
   <figure aria-label="Estado de cada día y eventos de la obra">${resize((width) => lineaTiempo(width))}</figure>
   <figure aria-label="Lluvia diaria en la obra">${resize((width) => lluvia(width))}</figure>
   <p class="nota-tabla">La franja resaltada marca la racha actual de días hábiles sin actividad. El gris claro en la fila de eventos marca una suspensión aprobada. Pase el cursor por un día para ver su detalle.</p>
+  <details class="tabla-dias">
+    <summary>Ver los días como tabla</summary>
+    ${tablaDias()}
+  </details>
   <h3 style="margin-top: 2rem;">Eventos de esta obra</h3>
   ${eventosObra.length ? html`<ul class="eventos">${eventosObra.map((e) => html`<li><b>${fechaLarga(e.fecha)}.</b> ${e.categoria === "ciudadania" ? "Reporte ciudadano" : "Contrato"}: ${e.detalle}</li>`)}</ul>` : html`<p class="tenue">Sin eventos del contrato ni reportes ciudadanos en el período.</p>`}
 </section>
@@ -278,7 +297,7 @@ const conSerie = serie.some((d) => d.obra_id === obraId && d.serie === "previsto
   <h2>¿Lo reportado coincide con lo que vio la cámara?</h2>
   <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad observada cada semana.</p>
   ${conSerie ? html`<figure aria-label="Avance previsto, reportado y pagado de la obra">${resize((width) => contraste(width))}</figure>
-  <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>` : html`<p class="vacio">Esta obra no tiene contrato ni informes de avance en el registro, así que no hay con qué contrastar lo observado. Cuando el gestor de datos los registre, este contraste aparecerá solo.</p>`}
+  <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>` : html`<p class="vacio">Esta obra no tiene contrato ni informes de avance en el registro, así que no hay con qué contrastar lo observado. Cuando el encargado de actualización de la obra los registre, este contraste aparecerá solo.</p>`}
   <p>Esta obra tuvo actividad en <strong>${num(100 * o.proporcion_semanas_activas, 0)}&nbsp;%</strong> de sus semanas con datos (hasta 12). En la obra típica de la cartera, la cifra es ${num(100 * mediana, 0)}&nbsp;%.</p>
   <p class="nota-tabla">La actividad no mide el avance físico: sirve para detectar avances reportados que la cámara no respalda.</p>
 </section>
@@ -287,11 +306,15 @@ const conSerie = serie.some((d) => d.obra_id === obraId && d.serie === "previsto
 const evObra = evidencia.filter((d) => d.obra_id === obraId);
 const diasEvidencia = [...new Set(evObra.map((d) => String(d.fecha_hora).slice(0, 10)))].sort().reverse();
 const estadoPorDia = new Map(dias.map((d) => [d.fecha.toISOString().slice(0, 10), d]));
-const selectorDia = Inputs.select(diasEvidencia, {
-  label: "Día",
-  format: (d) => `${fechaLarga(d)}, ${ESTADOS[estadoPorDia.get(d)?.estado ?? "sin_datos"].label.toLowerCase()}`
-});
+const etiquetaDia = (d) => `${fechaLarga(d)}, ${ESTADOS[estadoPorDia.get(d)?.estado ?? "sin_datos"].label.toLowerCase()}`;
+const selectorDia = Inputs.select(diasEvidencia, {label: "Día", format: etiquetaDia});
 const diaEvidencia = Generators.input(selectorDia);
+// Por omisión se compara con el último día con actividad (o con el primero con datos)
+const ultimoActivoISO = ultimoActivo ? ultimoActivo.toISOString().slice(0, 10) : null;
+const sugerido = ultimoActivoISO && ultimoActivoISO !== diasEvidencia[0] ? ultimoActivoISO : diasEvidencia.at(-1);
+const selectorComparar = Inputs.select(["", ...diasEvidencia], {label: "Comparar con", value: sugerido,
+  format: (d) => (d ? etiquetaDia(d) : "No comparar")});
+const diaComparar = Generators.input(selectorComparar);
 ```
 
 ```js
@@ -321,14 +344,24 @@ function marco(nombre, filas) {
   const origen = filas[0].fuente === "real" ? "etiquetado por personas" : filas[0].imagen_piloto ? `recuadros de la foto ${String(filas[0].imagen_piloto).slice(0, 15)} del piloto` : "";
   return html`<figure>${lienzo.node()}<figcaption><b>${hora(filas[0].fecha_hora)}</b>: ${plural(personas, "persona", "personas")}, ${plural(maquinas, "máquina", "máquinas")}${origen ? html`<br><span class="tenue">${origen}</span>` : ""}</figcaption></figure>`;
 }
-const imagenesDia = d3.groups(evObra.filter((d) => String(d.fecha_hora).startsWith(diaEvidencia)), (d) => d.nombre_imagen);
+const imagenesDe = (dia) => d3.groups(evObra.filter((d) => String(d.fecha_hora).startsWith(dia)), (d) => d.nombre_imagen);
+const imagenesDia = imagenesDe(diaEvidencia);
+const imagenesComparar = diaComparar && diaComparar !== diaEvidencia ? imagenesDe(diaComparar) : [];
+function filaFotos(dia, imagenes) {
+  const resumenDia = estadoPorDia.get(dia);
+  return html`<div class="dia-fotos">
+    <h3>${fechaLarga(dia)} <span class="tenue">${ESTADOS[resumenDia?.estado ?? "sin_datos"].label.toLowerCase()}${resumenDia && resumenDia.estado !== "sin_datos" ? `, ${num(100 * resumenDia.pct_actividad, 0)}\u00a0% de las fotos con actividad` : ""}</span></h3>
+    <div class="fotos">${imagenes.length ? imagenes.map(([nombre, filas]) => marco(nombre, filas)) : html`<p class="vacio">Ese día la cámara no envió fotos.</p>`}</div>
+  </div>`;
+}
 ```
 
 <section class="pestana" id="p-fotos" role="tabpanel" aria-labelledby="t-fotos" hidden>
   <h2>¿Qué muestran las fotos?</h2>
-  <p>${real ? "Fotos del día elegido con los objetos que etiquetaron personas en el piloto de dIAra. El 19 de marzo incluye las fotos reales, con las personas difuminadas." : "Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo."}</p>
-  ${selectorDia}
-  <div class="fotos">${imagenesDia.length ? imagenesDia.map(([nombre, filas]) => marco(nombre, filas)) : html`<p class="vacio">Ese día la cámara no envió fotos.</p>`}</div>
+  <p>${real ? "Fotos del día elegido con los objetos que etiquetaron personas en el piloto de dIAra. El 19 de marzo incluye las fotos reales, con las personas difuminadas." : "Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo. Compárelas con otro día para ver qué cambió."}</p>
+  <div class="selectores-fotos">${selectorDia}${selectorComparar}</div>
+  ${filaFotos(diaEvidencia, imagenesDia)}
+  ${imagenesComparar.length ? filaFotos(diaComparar, imagenesComparar) : ""}
   <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. ${real ? "Donde no hay foto publicada, los recuadros se dibujan sobre un marco vacío de 1280 por 1024 píxeles." : "Esta obra es simulada: no tiene fotos propias. Cada foto con actividad repite los objetos de una foto real del piloto de la misma hora, como los habría detectado el modelo, y se dibuja sobre un marco vacío."}</p>
   ${real ? "" : html`<details>
     <summary>Ver una foto real de una cámara de dIAra</summary>

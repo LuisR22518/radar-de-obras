@@ -10,8 +10,10 @@ Salidas:
   evidencia.csv        fotos de los últimos 21 días de cada obra con sus detecciones (visor de evidencia)
   eventos.csv          contexto en la línea de tiempo: contrato, feriados y reportes
   fuentes.csv          de dónde viene cada dato de cada obra (real, simulado o registro)
+  estado_publico.csv   estado observado de cada obra para la ciudadanía, sin puntajes ni alertas
   calidad.csv          problemas de calidad encontrados en el registro
-  bitacora.csv         últimos cambios hechos al registro por el gestor de datos
+  bitacora.csv         últimos cambios hechos al registro, con quién los hizo
+  responsables.csv     quién mantiene el registro y con qué rol
   resumen.json         la frase de cartera y los parámetros usados
 """
 import json
@@ -75,7 +77,12 @@ def evidencia(diario, inventario, lectura, dias=21) -> pd.DataFrame:
     reales = {f.name for f in FOTOS_PILOTO.glob("*.jpg")} if FOTOS_PILOTO.exists() else set()
     dias_con_foto = set(fotos.loc[fotos["nombre_imagen"].isin(reales), "fecha"])
     recientes = fotos["fecha"] > fotos["obra_id"].map(ultimos) - pd.Timedelta(days=dias)
-    fotos = fotos[recientes | fotos["fecha"].isin(dias_con_foto)]
+    # Para comparar "antes y después": el último día con actividad y el primer día con datos de cada obra
+    activos = diario[diario["estado"] == "actividad"].groupby("obra_id")["fecha"].max()
+    primeros = diario[diario["estado"] != "sin_datos"].groupby("obra_id")["fecha"].min()
+    clave = list(zip(fotos["obra_id"], fotos["fecha"]))
+    referencia = {(o, f) for o, f in activos.items()} | {(o, f) for o, f in primeros.items()}
+    fotos = fotos[recientes | fotos["fecha"].isin(dias_con_foto) | pd.Series([k in referencia for k in clave], index=fotos.index)]
     elegidas = []
     for (_, fecha), grupo in fotos.groupby(["camara_id", "fecha"]):
         con_foto = grupo[grupo["nombre_imagen"].isin(reales)]
@@ -91,6 +98,31 @@ def evidencia(diario, inventario, lectura, dias=21) -> pd.DataFrame:
     cols = ["obra_id", "camara_id", "nombre_imagen", "fecha_hora", "clase", "probabilidad",
             "x1", "y1", "x2", "y2", "origen", "fuente", "imagen_piloto", "foto"]
     return out[cols].sort_values(["obra_id", "fecha_hora"]).reset_index(drop=True)
+
+
+def estado_publico(sen, semanal, diario) -> pd.DataFrame:
+    """Lo que se puede mostrar a la ciudadanía (por ejemplo, en obrapublica.info): el estado observado
+    de cada obra, sin puntajes, alertas ni decisiones, que son información interna de fiscalización."""
+    etiquetas = {"actividad": "Con actividad", "sin_actividad": "Sin actividad", "sin_datos": "Sin datos de la cámara",
+                 "terminada": "Obra terminada"}
+    filas = []
+    for _, o in sen.iterrows():
+        sem = semanal[semanal["obra_id"] == o["obra_id"]].sort_values("semana")
+        ultimas = sem.tail(12)
+        con_dato = ultimas[ultimas["estado_semana"].isin(["actividad", "sin_actividad"])]
+        activo = diario[(diario["obra_id"] == o["obra_id"]) & (diario["estado"] == "actividad")]["fecha"].max()
+        if o["historica"]:
+            estado = "Monitoreo terminado"
+        elif o["en_cola_dispositivos"]:
+            estado = "Sin datos de la cámara"
+        else:
+            estado = etiquetas[sem["estado_semana"].iloc[-1]] if len(sem) else "Sin datos de la cámara"
+        filas.append([o["obra_id"], o["nombre"], o["tipo"], o["canton"], o["provincia"], estado,
+                      f"{int((con_dato['estado_semana'] == 'actividad').sum())} de {len(con_dato)}",
+                      activo.date() if pd.notna(activo) else None, o["fecha_corte_obra"],
+                      "Real (piloto de dIAra)" if o["fuente_datos"] == "dIAra real" else "Simulado"])
+    return pd.DataFrame(filas, columns=["obra_id", "nombre", "tipo", "canton", "provincia", "estado_esta_semana",
+                                        "semanas_con_actividad", "ultimo_dia_con_actividad", "datos_al", "origen"])
 
 
 def fuentes(obras, camaras, lectura) -> pd.DataFrame:
@@ -133,12 +165,14 @@ def calcular() -> dict:
         filas = [[p["tabla"], p["fila"], p["nivel"], p["mensaje"]] for p in intento["problemas"] if p["nivel"] == "error"] + filas
     calidad = pd.DataFrame(filas, columns=["tabla", "fila", "nivel", "mensaje"])
     bitacora = pd.read_csv(C.REGISTRO / "bitacora.csv").tail(50).iloc[::-1]
+    responsables = reg["responsables"].assign(rol=lambda d: d["rol"].map(REG.ROLES))[["nombre", "cargo", "rol", "activo"]]
     return {
         "obras": obras.reset_index(drop=True), "estado_diario": diario, "matriz_semanal": semanal,
         "senales": sen, "serie_avance": serie_avance(obras, eventos, avance, pagos),
         "eventos": eventos_linea_tiempo(eventos, feriados, reportes),
         "evidencia": evidencia(diario, inventario, lectura), "fuentes": fuentes(obras, camaras, lectura),
-        "calidad": calidad, "bitacora": bitacora, "resumen": res,
+        "estado_publico": estado_publico(sen, semanal, diario),
+        "calidad": calidad, "bitacora": bitacora, "responsables": responsables, "resumen": res,
     }
 
 
