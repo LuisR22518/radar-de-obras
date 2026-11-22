@@ -3,7 +3,7 @@ title: Análisis de obra
 ---
 
 ```js
-import {Plot, grafico, fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, alertasDe, razones, lamina, asegurarRayado, estiloPlot} from "./components/lupia.js";
+import {Plot, grafico, fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const fichas = await FileAttachment("data/obras.csv").csv({typed: true});
@@ -13,7 +13,8 @@ const serie = await FileAttachment("data/serie_avance.csv").csv({typed: true});
 const eventos = await FileAttachment("data/eventos.csv").csv({typed: true});
 const evidencia = await FileAttachment("data/evidencia.csv").csv({typed: true});
 const resumen = await FileAttachment("data/resumen.json").json();
-const porId = new Map(senales.map((d) => [d.obra_id, d]));
+const lista = ordenar(senales, resumen.pesos);
+const porId = new Map(lista.map((d) => [d.obra_id, d]));
 const fichaPorId = new Map(fichas.map((d) => [d.obra_id, d]));
 const DIA = 864e5;
 const corte = new Date(`${resumen.fecha_corte}T00:00:00Z`);
@@ -23,23 +24,23 @@ const finVentana = new Date(+corte + DIA);
 
 ```js
 const pedida = new URLSearchParams(location.search).get("id");
-const ordenadas = [...senales].sort((a, b) => a.prioridad - b.prioridad);
-const selector = Inputs.select(ordenadas.map((d) => d.obra_id), {
-  label: "Obra", value: porId.has(pedida) ? pedida : ordenadas[0].obra_id,
-  format: (id) => `${id}. ${porId.get(id).nombre}`
+const selector = Inputs.select(lista.map((d) => d.obra_id), {
+  label: "Ir a otra obra", value: porId.has(pedida) ? pedida : lista[0].obra_id,
+  format: (id) => `${porId.get(id).orden}. ${porId.get(id).nombre}`
 });
 const obraId = Generators.input(selector);
 ```
 
 ```js
-history.replaceState(null, "", `?id=${obraId}`);
+history.replaceState(null, "", `?id=${obraId}${location.hash}`);
 const o = porId.get(obraId);
 const ficha = fichaPorId.get(obraId);
+const siguiente = lista[o.orden % lista.length];
 const dias = diario.filter((d) => d.obra_id === obraId);
 const ultimas4 = dias.filter((d) => d.fecha > new Date(+corte - 28 * DIA));
-const habiles4 = ultimas4.filter((d) => d.es_habil);
+const habiles4 = ultimas4.filter((d) => d.es_habil && d.estado !== "sin_datos");
 const ultimoActivo = d3.max(dias.filter((d) => d.estado === "actividad"), (d) => d.fecha);
-const alertas = alertasDe(o);
+const semanas12 = semanal.filter((d) => d.obra_id === obraId).sort((a, b) => a.semana - b.semana).slice(-12);
 // Días de la racha actual de inactividad (los mismos que cuenta la regla en Python)
 const racha = [];
 for (const d of [...dias].sort((a, b) => b.fecha - a.fecha)) {
@@ -48,53 +49,97 @@ for (const d of [...dias].sort((a, b) => b.fecha - a.fecha)) {
   racha.push(d);
 }
 const nSinDatos = dias.filter((d) => d.estado === "sin_datos").length;
+const porQue = o.estado === "revisar" ? razones(o)
+  : [{texto: o.estado === "sin_datos"
+      ? `No llegan fotos desde el ${fechaLarga(o.ultima_captura)} (${plural(o.dias_sin_datos, "día", "días")}). Primero hay que reparar la cámara.`
+      : o.fase === "terminada" ? "La obra ya fue recibida: no genera alertas." : "Ninguna de las cinco señales pasa su límite."}];
 const queSabemos = [
-  `En las últimas 4 semanas hubo actividad en ${habiles4.filter((d) => d.estado === "actividad").length} de ${habiles4.length} días hábiles.`,
+  o.estado === "sin_datos" ? `Antes de la falla, la cámara mostraba actividad normal.` : `En las últimas 4 semanas hubo actividad en ${habiles4.filter((d) => d.estado === "actividad").length} de ${habiles4.length} días hábiles con datos.`,
   ultimoActivo ? `El último día con actividad fue el ${fechaLarga(ultimoActivo)}.` : "No se observó actividad en el período.",
-  `La cámara envió en promedio ${num(100 * d3.mean(ultimas4, (d) => d.cobertura), 0)} % de las fotos esperadas en esas 4 semanas.`,
-  `La ejecutora reportó ${num(o.avance_reportado_pct)} % de avance al ${fechaLarga(o.fecha_ultimo_informe)}.`
+  `La ejecutora reporta ${num(o.avance_reportado_pct)}\u00a0% de avance; el cronograma prevé ${num(o.avance_previsto_pct)}\u00a0%.`
 ];
 const noSePuede = [
-  "Si la obra avanza físicamente: la cámara mide presencia de personas y máquinas, no avance.",
-  "Qué pasa fuera del ángulo de la cámara.",
-  "Si hay una irregularidad: la señal solo indica dónde conviene revisar.",
-  "El modelo detecta unas 85 de cada 100 personas visibles y se entrenó solo con imágenes de la Escuela de Pocosí.",
-  ...(nSinDatos ? [nSinDatos === 1 ? "Lo ocurrido el día sin datos de la cámara." : `Lo ocurrido en los ${nSinDatos} días sin datos de la cámara.`] : [])
+  "Cuánto avanzó la obra: la cámara ve personas y máquinas, no avance físico.",
+  nSinDatos ? `Qué pasó fuera del ángulo de la cámara, ni en ${nSinDatos === 1 ? "el día" : `los ${nSinDatos} días`} sin datos.` : "Qué pasa fuera del ángulo de la cámara.",
+  "Si hay una irregularidad: LupIA solo indica dónde conviene revisar."
 ];
 ```
 
-<div class="encabezado-seccion">
-  <a class="volver" href="./index.html">Volver al orden de revisión</a>
-  ${selector}
+<div class="ficha-barra no-imprimir">
+  <a class="volver" href="./index.html">Volver a la lista</a>
+  <div class="ir">${selector}${html`<a class="boton secundario" href=${`./obra.html?id=${siguiente.obra_id}`}>Siguiente obra</a>`}</div>
 </div>
 
-<section class="cajetin" aria-label="Datos de la obra y del contrato">
-  <div class="titulo">${lamina(o.obra_id)}<h1>${o.nombre}</h1><span class="tenue">${o.tipo}, ${o.canton}</span></div>
-  <div class="prioridad"><p class="etiqueta">Prioridad</p><p class="valor">${o.prioridad} de ${senales.length}</p></div>
-  <div><p class="etiqueta">Institución ejecutora</p><p class="valor">${o.institucion_ejecutora}</p></div>
-  <div><p class="etiqueta">Contratista</p><p class="valor">${o.contratista}</p></div>
-  <div><p class="etiqueta">Monto vigente</p><p class="valor">${millones(o.monto_vigente_crc)}<small>${o.aumento_monto_pct > 0 ? `Original: ${millones(o.monto_original_crc)}, +${num(o.aumento_monto_pct)} %` : "Sin modificaciones"}</small></p></div>
-  <div><p class="etiqueta">Plazo vigente</p><p class="valor">${fechaLarga(ficha.fecha_inicio)} al ${fechaLarga(o.fecha_fin_vigente)}<small>${o.fase === "terminada" ? "Obra terminada" : o.prorroga_reciente ? "Incluye una prórroga reciente" : "Plazo original"}</small></p></div>
+<section class="ficha-cabeza" aria-labelledby="nombre-obra">
+  <div>
+    <p class="estado">${iconoEstado(o.estado, o.orden, 24)}${o.estado === "revisar" ? html`<span class="marca">${ESTADO_OBRA[o.estado].label}</span>` : ESTADO_OBRA[o.estado].label}<span class="posicion">Número ${o.orden} de ${lista.length} en la lista</span></p>
+    <h1 id="nombre-obra">${o.nombre}</h1>
+    <p class="lugar">${o.tipo} en ${o.canton}, ${ficha.provincia}. Obra ${o.obra_id}.</p>
+    <h2>${o.estado === "revisar" ? "Por qué necesita revisión" : "Situación"}</h2>
+    <ul class="razones">${porQue.map((r) => html`<li class=${r.explicada ? "explicada" : ""}>${r.texto}</li>`)}</ul>
+  </div>
+  <dl class="datos-clave">
+    <div><dt>Institución ejecutora</dt><dd>${o.institucion_ejecutora}</dd></div>
+    <div><dt>Contratista</dt><dd>${o.contratista}</dd></div>
+    <div><dt>Monto vigente</dt><dd>${millones(o.monto_vigente_crc)}<small>${o.aumento_monto_pct > 0 ? `Original ${millones(o.monto_original_crc)}` : "Sin cambios"}</small></dd></div>
+    <div><dt>Termina</dt><dd>${fechaLarga(o.fecha_fin_vigente)}<small>${o.fase === "terminada" ? "Obra recibida" : o.prorroga_reciente ? "Con prórroga reciente" : "Plazo original"}</small></dd></div>
+    <div><dt>Avance reportado</dt><dd>${num(o.avance_reportado_pct)}&nbsp;%<small>Al ${fechaLarga(o.fecha_ultimo_informe)}</small></dd></div>
+    <div><dt>Avance previsto</dt><dd>${num(o.avance_previsto_pct)}&nbsp;%<small>Según el cronograma vigente</small></dd></div>
+  </dl>
 </section>
 
-<section class="veredicto" aria-labelledby="veredicto">
-  <h2 id="veredicto">${o.en_cola_dispositivos ? "La cámara no envía datos" : alertas.length ? html`<span class="marca marca-trazo">Amerita revisión</span>` : o.fase === "terminada" ? "Obra terminada, sin alertas" : "Sin alertas"}</h2>
-  <p class="tenue">${o.en_cola_dispositivos
-    ? `Desde el ${fechaLarga(o.ultima_captura)} no llegan fotos (${plural(o.dias_sin_datos, "día", "días")}). Primero hay que reparar la cámara: mientras tanto no se puede concluir nada sobre la obra.`
-    : `Puntaje de atención: ${Math.round(o.puntaje)} de 100.`}</p>
-  ${alertas.length && !o.en_cola_dispositivos ? html`<ul class="razones">${razones(o).map((r) => html`<li class=${r.explicada ? "explicada" : ""}>${r.texto}</li>`)}</ul>` : ""}
+```js
+const PESTANAS = [["resumen", "Resumen"], ["actividad", "Actividad diaria"], ["avance", "Avance y pagos"], ["fotos", "Fotos"], ["decision", "Decisión"]];
+const claves = PESTANAS.map(([k]) => k);
+const pestanas = html`<div class="pestanas" role="tablist" aria-label="Análisis de la obra">${PESTANAS.map(([k, t]) =>
+  html`<button type="button" role="tab" id=${`t-${k}`} aria-controls=${`p-${k}`} data-k=${k}>${t}</button>`)}</div>`;
+const desdeEnlace = location.hash.slice(1);
+pestanas.value = claves.includes(desdeEnlace) ? desdeEnlace : "resumen";
+function elegir(k, enfocar = false) {
+  pestanas.value = k;
+  if (enfocar) pestanas.querySelector(`[data-k="${k}"]`).focus();
+  pestanas.dispatchEvent(new Event("input", {bubbles: true}));
+}
+pestanas.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) elegir(b.dataset.k); });
+pestanas.addEventListener("keydown", (e) => {
+  const i = claves.indexOf(pestanas.value);
+  const destino = {ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: claves.length - 1}[e.key];
+  if (destino == null) return;
+  e.preventDefault();
+  elegir(claves[(destino + claves.length) % claves.length], true);
+});
+const alCambiarEnlace = () => { const k = location.hash.slice(1); if (claves.includes(k) && k !== pestanas.value) elegir(k); };
+addEventListener("hashchange", alCambiarEnlace);
+invalidation.then(() => removeEventListener("hashchange", alCambiarEnlace));
+const pestana = Generators.input(pestanas);
+```
+
+```js
+// Muestra solo la pestaña elegida y la recuerda en el enlace (#fotos, #decision...)
+for (const k of claves) {
+  const boton = pestanas.querySelector(`[data-k="${k}"]`);
+  boton.setAttribute("aria-selected", String(k === pestana));
+  boton.tabIndex = k === pestana ? 0 : -1;
+  document.getElementById(`p-${k}`).hidden = k !== pestana;
+}
+history.replaceState(null, "", `${location.search}${pestana === "resumen" ? "" : `#${pestana}`}`);
+```
+
+<div class="contenedor-pestanas">${pestanas}</div>
+
+<section class="pestana" id="p-resumen" role="tabpanel" aria-labelledby="t-resumen">
+  <h2>Lo esencial</h2>
+  <p>Lo que los datos permiten afirmar y lo que no, antes de abrir el detalle.</p>
   <div class="saber">
     <div><h3>Qué sabemos</h3><ul>${queSabemos.map((t) => html`<li>${t}</li>`)}</ul></div>
     <div><h3>Qué no se puede concluir</h3><ul>${noSePuede.map((t) => html`<li>${t}</li>`)}</ul></div>
   </div>
+  <h3 style="margin-top: 2.5rem;">Actividad en las últimas 12 semanas</h3>
+  ${leyendaEstados(["actividad", "sin_actividad", "sin_datos", "terminada"])}
+  <div style="margin-top: 0.5rem;">${pulso(semanas12, {celda: 30, alto: 30, sep: 5})}</div>
+  <p class="nota-tabla">Cada cuadro es una semana. Un punto marca una semana sin actividad que tiene una explicación posible, como un feriado o lluvia fuerte.</p>
+  <p>${html`<button class="boton" type="button" onclick=${() => elegir("actividad")}>Ver la actividad día por día</button>`}</p>
 </section>
-
-<nav class="pasos" aria-label="Pasos del análisis">
-  <a href="#analizar"><b>1</b>Analizar</a>
-  <a href="#contrastar"><b>2</b>Contrastar</a>
-  <a href="#verificar"><b>3</b>Verificar</a>
-  <a href="#documentar"><b>4</b>Documentar</a>
-</nav>
 
 ```js
 const CATEGORIA = {contrato: "Evento del contrato", ciudadania: "Reporte ciudadano", feriado: "Feriado"};
@@ -115,7 +160,7 @@ function lineaTiempo(width) {
       Plot.rect(susp, {x1: "fecha", x2: (d) => new Date(+d.fecha + DIA), y1: 1.1, y2: 1.9, fill: "var(--niebla)"}),
       Plot.rect(datos, {
         x1: "fecha", x2: (d) => new Date(+d.fecha + 0.86 * DIA), y1: 0, y2: 1, fill: "estadoVista", stroke: "var(--trazo)", strokeWidth: 0.6,
-        title: (d) => `${fechaLarga(d.fecha)}: ${d.estadoVista.toLowerCase()}\nLa cámara envió ${num(100 * d.cobertura, 0)} % de las fotos; ${num(100 * d.pct_actividad, 0)} % con actividad` +
+        title: (d) => `${fechaLarga(d.fecha)}: ${d.estadoVista.toLowerCase()}\nLa cámara envió ${num(100 * d.cobertura, 0)}\u00a0% de las fotos; ${num(100 * d.pct_actividad, 0)}\u00a0% con actividad` +
           (d.explicacion ? `\nContexto: ${d.explicacion}` : ""), tip: true
       }),
       Plot.dot(datos.filter((d) => d.explicacion && d.estado === "sin_actividad"), {x: (d) => new Date(+d.fecha + 0.43 * DIA), y: 0.5, r: 2, fill: "var(--grafito)"}),
@@ -142,13 +187,19 @@ function lluvia(width) {
 }
 ```
 
-<section class="paso bloque" id="analizar" aria-labelledby="t-analizar">
-  <h2 id="t-analizar"><span class="n">1</span>¿La alerta tiene explicación?</h2>
-  <p>Cada día de las últimas 12 semanas, junto a los feriados, los eventos del contrato, los reportes ciudadanos y la lluvia.</p>
+```js
+const eventosObra = eventos.filter((e) => e.obra_id === obraId).sort((a, b) => b.fecha - a.fecha);
+```
+
+<section class="pestana" id="p-actividad" role="tabpanel" aria-labelledby="t-actividad" hidden>
+  <h2>¿Hubo trabajo en la obra?</h2>
+  <p>Cada día de las últimas 12 semanas, con los feriados, los eventos del contrato, los reportes ciudadanos y la lluvia.</p>
   ${leyendaEstados()}
   <figure aria-label="Estado de cada día y eventos de la obra">${resize((width) => lineaTiempo(width))}</figure>
   <figure aria-label="Lluvia diaria en la obra">${resize((width) => lluvia(width))}</figure>
-  <p class="nota-tabla">La franja resaltada marca la racha actual de días hábiles sin actividad. El gris claro en la fila de eventos marca los días con suspensión aprobada, y un punto en un día vacío indica una explicación posible. Origen de la lluvia: ${resumen.origen_clima.join(", ")}.</p>
+  <p class="nota-tabla">La franja resaltada marca la racha actual de días hábiles sin actividad. El gris claro en la fila de eventos marca una suspensión aprobada. Pase el cursor por un día para ver su detalle.</p>
+  <h3 style="margin-top: 2rem;">Eventos de esta obra</h3>
+  ${eventosObra.length ? html`<ul class="eventos">${eventosObra.map((e) => html`<li><b>${fechaLarga(e.fecha)}.</b> ${e.categoria === "ciudadania" ? "Reporte ciudadano" : "Contrato"}: ${e.detalle}</li>`)}</ul>` : html`<p class="tenue">Sin eventos del contrato ni reportes ciudadanos en el período.</p>`}
 </section>
 
 ```js
@@ -173,7 +224,7 @@ function contraste(width) {
       Plot.line(porSerie("pagado"), {x: "fecha", y: "valor_pct", stroke: "var(--grafito)", strokeWidth: 1.5, curve: "step-after"}),
       Plot.line(porSerie("reportado"), {x: "fecha", y: "valor_pct", stroke: "var(--tinta)", strokeWidth: 2.25}),
       Plot.dot([...porSerie("reportado"), ...porSerie("pagado")], {x: "fecha", y: "valor_pct", r: 3.5, fill: (d) => (d.serie === "reportado" ? "var(--tinta)" : "var(--grafito)"), stroke: "var(--papel)",
-        title: (d) => `${NOMBRES[d.serie]} al ${fechaLarga(d.fecha)}: ${num(d.valor_pct)} %`, tip: true}),
+        title: (d) => `${NOMBRES[d.serie]} al ${fechaLarga(d.fecha)}: ${num(d.valor_pct)}\u00a0%`, tip: true}),
       Plot.text(finales, {x: "fecha", y: "y", text: "nombre", dx: 10, textAnchor: "start", fill: "var(--tinta)", fontWeight: 600}),
       ultimo && o.atraso_pts >= 5 ? Plot.link([0], {x1: ultimo.fecha, x2: ultimo.fecha, y1: ultimo.valor_pct, y2: o.avance_previsto_pct, stroke: "var(--tinta)", strokeWidth: 1.5, markerStart: "tick", markerEnd: "tick"}) : null,
       ultimo && o.atraso_pts >= 5 ? Plot.text([0], {x: ultimo.fecha, y: (ultimo.valor_pct + o.avance_previsto_pct) / 2, text: () => `${num(o.atraso_pts)} puntos de atraso`, dx: -10, textAnchor: "end", fill: "var(--tinta)", fontWeight: 600, stroke: "var(--papel)", strokeWidth: 4, paintOrder: "stroke"}) : null
@@ -194,30 +245,16 @@ function franjaSemanas(width) {
     ]
   });
 }
-function comparacion(width) {
-  const datos = senales.filter((d) => d.fase !== "terminada" && !d.en_cola_dispositivos);
-  return grafico({
-    width, height: 96, marginLeft: 12, marginRight: 12, style: estiloPlot,
-    x: {domain: [0, 1], label: "Semanas con actividad observada", labelAnchor: "center", labelArrow: "none", tickFormat: (d) => `${num(100 * d, 0)} %`, grid: true},
-    y: {axis: null},
-    marks: [
-      Plot.dot(datos, Plot.dodgeY({x: "proporcion_semanas_activas", r: 10, fill: (d) => (d.obra_id === obraId ? "var(--tinta)" : "var(--papel)"),
-        stroke: (d) => (d.obra_id === obraId ? "var(--tinta)" : "var(--trazo)"), strokeWidth: 1.25,
-        title: (d) => `${d.obra_id}. ${d.nombre}: ${num(100 * d.proporcion_semanas_activas, 0)} % de semanas con actividad`, tip: true})),
-      Plot.text(datos, Plot.dodgeY({x: "proporcion_semanas_activas", r: 10, text: "obra_id", fill: (d) => (d.obra_id === obraId ? "var(--papel)" : "var(--tinta)"), fontWeight: 700, fontSize: 11}))
-    ]
-  });
-}
+const mediana = d3.median(senales.filter((d) => d.fase !== "terminada" && !d.en_cola_dispositivos), (d) => d.proporcion_semanas_activas);
 ```
 
-<section class="paso bloque" id="contrastar" aria-labelledby="t-contrastar">
-  <h2 id="t-contrastar"><span class="n">2</span>¿Lo reportado coincide con lo observado?</h2>
-  <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad que vio la cámara cada semana.</p>
+<section class="pestana" id="p-avance" role="tabpanel" aria-labelledby="t-avance" hidden>
+  <h2>¿Lo reportado coincide con lo que vio la cámara?</h2>
+  <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad observada cada semana.</p>
   <figure aria-label="Avance previsto, reportado y pagado de la obra">${resize((width) => contraste(width))}</figure>
   <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>
+  <p>Esta obra tuvo actividad en <strong>${num(100 * o.proporcion_semanas_activas, 0)}&nbsp;%</strong> de las últimas 12 semanas. En la obra típica de la cartera, la cifra es ${num(100 * mediana, 0)}&nbsp;%.</p>
   <p class="nota-tabla">La actividad no mide el avance físico: sirve para detectar avances reportados que la cámara no respalda.</p>
-  <h3 style="margin-top: 2rem;">Frente al resto de la cartera</h3>
-  <figure aria-label="Proporción de semanas con actividad de cada obra">${resize((width) => comparacion(width))}</figure>
 </section>
 
 ```js
@@ -254,12 +291,12 @@ function marco(nombre, filas) {
 const imagenesDia = d3.groups(evObra.filter((d) => String(d.fecha_hora).startsWith(diaEvidencia)), (d) => d.nombre_imagen);
 ```
 
-<section class="paso bloque" id="verificar" aria-labelledby="t-verificar">
-  <h2 id="t-verificar"><span class="n">3</span>¿La evidencia sostiene la alerta?</h2>
-  <p>Cuatro fotos del día, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo.</p>
+<section class="pestana" id="p-fotos" role="tabpanel" aria-labelledby="t-fotos" hidden>
+  <h2>¿Qué muestran las fotos?</h2>
+  <p>Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo.</p>
   ${selectorDia}
   <div class="fotos">${imagenesDia.length ? imagenesDia.map(([nombre, filas]) => marco(nombre, filas)) : html`<p class="vacio">Ese día la cámara no envió fotos.</p>`}</div>
-  <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. Pase el cursor por un recuadro para ver su probabilidad. Como las detecciones son simuladas, no hay fotos: se dibujan los recuadros del CSV sobre un marco de 1280 por 1024 píxeles.</p>
+  <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. Como las detecciones son simuladas, se dibujan los recuadros del CSV sobre un marco vacío de 1280 por 1024 píxeles.</p>
   <details>
     <summary>Ver una foto real de una cámara de dIAra</summary>
     <img src="./data/ejemplo-camara-diara.jpg" alt="Foto real de una cámara de dIAra durante el piloto: movimiento de tierras con una vagoneta y un cargador al fondo y un trabajador de espaldas." style="max-width: 640px; width: 100%; border-radius: 4px; margin-top: 0.75rem;">
@@ -273,16 +310,15 @@ let guardado = null;
 try { guardado = JSON.parse(localStorage.getItem(clave) ?? "null"); } catch {}
 guardado ??= {estado: "Nueva", motivo: "", nota: ""};
 const formDecision = Inputs.form({
-  estado: Inputs.radio(["Nueva", "En análisis", "Descartada", "Remitida"], {label: "Estado de la alerta", value: guardado.estado}),
+  estado: Inputs.radio(["Nueva", "En análisis", "Descartada", "Remitida"], {label: "Estado", value: guardado.estado}),
   motivo: Inputs.select(["", "Feriado o lluvia", "Suspensión aprobada", "Falla de cámara", "Obra terminada", "Otro"], {label: "Motivo si se descarta", value: guardado.motivo}),
-  nota: Inputs.textarea({label: "Nota del auditor", value: guardado.nota, rows: 3, width: 480, placeholder: "Qué revisó y qué concluyó"})
+  nota: Inputs.textarea({label: "Nota", value: guardado.nota, rows: 3, width: 480, placeholder: "Qué revisó y qué concluyó"})
 });
 const decision = Generators.input(formDecision);
 ```
 
 ```js
 try { localStorage.setItem(clave, JSON.stringify({...decision, actualizado: new Date().toISOString()})); } catch {}
-
 function expedienteCSV() {
   const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const filas = [
@@ -291,7 +327,7 @@ function expedienteCSV() {
     ["Obra", `${o.obra_id}. ${o.nombre}`], ["Tipo", o.tipo], ["Cantón", o.canton],
     ["Institución ejecutora", o.institucion_ejecutora], ["Contratista", o.contratista],
     ["Monto vigente (CRC)", o.monto_vigente_crc], ["Fin vigente", o.fecha_fin_vigente], [],
-    ["Puntaje de atención", o.puntaje], ["Prioridad", o.prioridad],
+    ["Puntaje de atención", o.puntaje], ["Número en la lista", o.orden],
     ...SENALES.map((s) => [`Señal: ${s.label}`, o[`senal_${s.key}`], `peso ${resumen.pesos[s.key]}`]),
     ["Razones", razones(o).map((r) => r.texto).join(" | ")], [],
     ["Decisión del auditor", decision.estado], ["Motivo", decision.motivo], ["Nota", decision.nota], [],
@@ -311,12 +347,13 @@ function descargar() {
 }
 ```
 
-<section class="paso bloque registro" id="documentar" aria-labelledby="t-documentar">
-  <h2 id="t-documentar"><span class="n">4</span>¿Qué decidió y con qué respaldo?</h2>
-  <p>La decisión se guarda en este navegador. El expediente reúne datos, señales, decisión y el estado de cada día, y sirve como papel de trabajo.</p>
+<section class="pestana registro" id="p-decision" role="tabpanel" aria-labelledby="t-decision" hidden>
+  <h2>¿Qué decide sobre esta obra?</h2>
+  <p>La decisión se guarda en este navegador y aparece en la lista. El expediente reúne los datos, las señales, la decisión y el estado de cada día, y sirve como papel de trabajo.</p>
   ${formDecision}
   <div class="lupia-acciones no-imprimir">
     ${html`<button class="boton" type="button" onclick=${descargar}>Descargar expediente</button>`}
     ${html`<button class="boton secundario" type="button" onclick=${() => window.print()}>Imprimir o guardar en PDF</button>`}
   </div>
+  <p class="siguiente no-imprimir">${html`Siguiente en la lista: <a href=${`./obra.html?id=${siguiente.obra_id}`}>${siguiente.orden}. ${siguiente.nombre}</a>`}</p>
 </section>

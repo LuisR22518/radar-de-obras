@@ -6,9 +6,9 @@ LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalizac
 
 LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene tres páginas:
 
-- **Orden de revisión:** la obra que conviene revisar primero y por qué, el orden de todas las obras con su pulso de 12 semanas y sus señales, riesgo frente a monto y pesos ajustables.
-- **Análisis de obra:** alertas explicadas, línea de tiempo con contexto (feriados, suspensiones, lluvia y reportes ciudadanos), contraste entre lo reportado y lo observado, visor de evidencia, comparación y registro con expediente descargable.
-- **Metodología:** reglas, umbrales, procedencia y limitaciones.
+- **Qué revisar:** cuántas obras necesitan revisión, un mapa de Costa Rica y la lista en orden con la razón en palabras; búsqueda, descarga de la lista y, en paneles plegables, cómo se decide el orden, la importancia de cada señal y el cruce de riesgo y monto.
+- **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones y decisión con expediente descargable.
+- **Cómo funciona:** los pasos, las cinco señales, de dónde salen los datos y quién los mantiene, y los límites; el detalle técnico va plegado.
 
 ## Cómo correrlo en tu computadora
 

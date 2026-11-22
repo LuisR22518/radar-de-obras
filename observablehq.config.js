@@ -3,16 +3,15 @@
 const lupa = `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="8.5" cy="8.5" r="2" fill="#ffe45c"/></svg>`;
 
 const paginas = [
-  {nombre: "Orden de revisión", href: "./index.html", rutas: ["/", "/index"]},
-  {nombre: "Análisis de obra", href: "./obra.html", rutas: ["/obra"]},
-  {nombre: "Metodología", href: "./metodologia.html", rutas: ["/metodologia"]}
+  {nombre: "Qué revisar", href: "./index.html", rutas: ["/", "/obra", "/index"]},
+  {nombre: "Cómo funciona", href: "./metodologia.html", rutas: ["/metodologia"]}
 ];
 
 export default {
   title: "LupIA",
   root: "src",
   lang: "es",
-  pages: paginas.map((p) => ({name: p.nombre, path: p.rutas.at(-1)})),
+  pages: [{name: "Qué revisar", path: "/index"}, {name: "Análisis de obra", path: "/obra"}, {name: "Cómo funciona", path: "/metodologia"}],
   sidebar: false,
   toc: false,
   pager: false,
