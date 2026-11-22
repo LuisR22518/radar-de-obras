@@ -449,3 +449,10 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
   .apilada td::before { content: attr(data-et); position: absolute; left: 0; top: 0.35rem; width: 7.5rem; color: var(--grafito); font-size: var(--t-xs); line-height: 1.3; }
 }
 #observablehq-footer a { text-decoration: underline; }
+/* Reportar un dato que no cuadra (ficha de obra) */
+.reportar { margin: 3rem 0 0; padding: 1rem 0 0; border-top: 1px solid var(--linea); max-width: 46rem; }
+.reportar summary { cursor: pointer; font-weight: 600; color: var(--tinta); }
+.reportar[open] summary { margin-bottom: 0.75rem; }
+.reportar form { margin: 1rem 0; }
+.reportar textarea, .reportar input[type="text"] { width: 100%; }
+.reportar textarea, .reportar input[type="text"], .reportar select { font: inherit; font-size: 1rem; padding: 0.45rem 0.6rem; box-sizing: border-box; }

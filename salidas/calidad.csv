@@ -1,2 +1,3 @@
 tabla,fila,nivel,mensaje
+Responsables,0,aviso,Falta la columna «correo». Agréguela en la fila 1 de la pestaña; mientras tanto se toma como vacía.
 Obras,10,aviso,"Obra P: faltan datos del contrato (monto original, fecha de inicio, fecha de fin y contratista). Sin ellos no se calculan las señales del contrato."

@@ -71,6 +71,6 @@ ${tablaObras()}
 - **Que el avance y los pagos sean ciertos.** Son lo que reporta la ejecutora; LupIA los compara con lo que vio la cámara, pero no revisa los documentos.
 - **Nada de las obras simuladas.** Sus contratos, informes y pagos son ficticios; solo la escuela del piloto en Pococí usa datos reales de dIAra.
 
-<p class="nota-tabla">La gerencia y los encargados de actualización corrigen el registro desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
+<p class="nota-tabla">¿Vio un dato que no cuadra? Repórtelo desde la ficha de la obra, en «Reportar un dato que no cuadra», al final de la página. La gerencia y los encargados de actualización lo corrigen desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
 
 </div>

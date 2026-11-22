@@ -178,7 +178,7 @@ def calcular() -> dict:
         filas = [[p["tabla"], p["fila"], p["nivel"], p["mensaje"]] for p in intento["problemas"] if p["nivel"] == "error"] + filas
     calidad = pd.DataFrame(filas, columns=["tabla", "fila", "nivel", "mensaje"])
     bitacora = pd.read_csv(C.REGISTRO / "bitacora.csv").tail(50).iloc[::-1]
-    responsables = reg["responsables"].assign(rol=lambda d: d["rol"].map(REG.ROLES))[["nombre", "cargo", "rol", "activo"]]
+    responsables = reg["responsables"].assign(rol=lambda d: d["rol"].map(REG.ROLES))[["nombre", "cargo", "rol", "activo", "correo"]]
     return {
         "obras": obras.reset_index(drop=True), "estado_diario": diario, "matriz_semanal": semanal,
         "senales": sen, "serie_avance": serie_avance(obras, eventos, avance, pagos),

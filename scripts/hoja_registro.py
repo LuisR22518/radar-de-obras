@@ -31,7 +31,7 @@ ANCHOS = {"obra_id": 9, "nombre": 30, "tipo": 20, "provincia": 13, "canton": 16,
           "fecha": 12, "detalle": 45, "dias_prorroga": 13, "monto_nuevo_crc": 17, "suspension_desde": 16,
           "suspension_hasta": 16, "documento": 38, "avance_reportado_pct": 19, "pagado_acumulado_crc": 21,
           "descripcion": 50, "con_foto": 10, "canal": 28, "fuente": 45, "actualizado_por": 30, "cargo": 34,
-          "rol": 24, "activo": 9}
+          "rol": 24, "activo": 9, "correo": 34}
 FORMATOS = {"monto_original_crc": "#,##0", "monto_nuevo_crc": "#,##0", "pagado_acumulado_crc": "#,##0",
             "avance_reportado_pct": "0.0", "lat": "0.0000", "lon": "0.0000", "dias_prorroga": "0"}
 LARGOS = {"nombre", "institucion_ejecutora", "nota", "detalle", "documento", "descripcion", "canal", "fuente", "cargo"}

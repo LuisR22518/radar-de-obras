@@ -13,6 +13,8 @@ const resumen = await FileAttachment("data/resumen.json").json();
 const GERENCIA = "Gerencia";
 const ENCARGADO = "Encargado de actualización de obra";
 const DE_GERENCIA = new Set(["Obras", "Cámaras", "Feriados", "Responsables"]);
+const receptores = responsables.filter((d) => d.activo === "si" && d.correo);
+const SIN_RECEPTOR = "Los reportes de datos que hacen los auditores no tienen a quién llegar.";
 const hace = (n) => (n === 0 ? "hoy" : `hace ${plural(n, "día", "días")}`);
 const hora = (t) => String(t).slice(0, 16).replace("T", ", ");
 const corte = new Date(resumen.fecha_corte);
@@ -32,7 +34,10 @@ const pendientes = [
     o.pago_vencido && {nivel: "Vencido", donde: o.nombre, quien: ENCARGADO,
       que: o.ultimo_pago ? `El último pago registrado es del ${fechaLarga(o.ultimo_pago)} (${hace(o.dias_pago)}). Confirme si falta registrar alguno.` : "No hay pagos registrados."}
   ].filter(Boolean)),
-  ...avisos.map((d) => ({nivel: "Aviso", que: d.mensaje, donde: enHoja(d), quien: aCargo(d.tabla)}))
+  ...avisos.map((d) => ({nivel: "Aviso", donde: enHoja(d), quien: aCargo(d.tabla),
+    que: d.tabla === "Responsables" && d.mensaje.includes("«correo»") ? `${SIN_RECEPTOR} Agregue la columna «correo» en la pestaña responsables y escriba el correo de quien debe recibirlos.` : d.mensaje})),
+  ...(!receptores.length && !avisos.some((d) => d.mensaje.includes("«correo»"))
+    ? [{nivel: "Aviso", que: `${SIN_RECEPTOR} Escriba en la pestaña responsables el correo de quien debe recibirlos.`, donde: "Pestaña Responsables", quien: GERENCIA}] : [])
 ];
 const alDia = mantenimiento.filter((d) => d.al_dia).length;
 const cambios30 = bitacora.filter((d) => (corte - new Date(d.fecha_hora)) / 864e5 <= 30).length;
@@ -116,7 +121,7 @@ function tablaRoles() {
     [GERENCIA, "Obras, cámaras, feriados y responsables. Decide qué obras se vigilan y avisa al equipo de dIAra cuando una cámara deja de enviar fotos.", personas(GERENCIA)],
     [ENCARGADO, "Cambios de contrato, avance reportado, pagos y reportes ciudadanos, cada fila con el documento que la respalda.", personas(ENCARGADO)],
     ["Equipo de dIAra", "Repara las cámaras. No edita la hoja.", "—"],
-    ["Auditor", "Consulta LupIA. No edita la hoja.", "—"]
+    ["Auditor", "Consulta LupIA. No edita la hoja: si un dato no cuadra, lo reporta desde la ficha de la obra y el reporte llega por correo a las personas con correo registrado.", "—"]
   ];
   return html`<table class="tabla-datos apilada" tabindex="0">
     <thead><tr><th scope="col">Rol</th><th scope="col">Qué mantiene</th><th scope="col">Personas</th></tr></thead>
@@ -126,6 +131,8 @@ function tablaRoles() {
 ```
 
 ${tablaRoles()}
+
+<p class="nota-tabla">${receptores.length ? `Reciben los reportes de los auditores: ${receptores.map((d) => d.nombre).join(", ")}.` : "Nadie recibe todavía los reportes de los auditores: falta registrar un correo en la pestaña responsables."} Como LupIA es un sitio público, use un buzón institucional y no un correo personal.</p>
 
 <p class="nota-tabla">Cada fila de la hoja lleva el nombre de quien la cambió en la columna <em>actualizado_por</em>, y ese nombre debe estar en la pestaña de responsables.</p>
 

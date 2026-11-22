@@ -11,6 +11,8 @@ Dos niveles de problema:
 """
 from dataclasses import dataclass, field
 
+import re
+
 import pandas as pd
 
 from . import config as C
@@ -51,7 +53,7 @@ TABLAS = {
     "feriados": [("fecha", "fecha", True), ("nombre", "texto", True), ("fuente", "texto", False),
                  ("actualizado_por", "texto", False)],
     "responsables": [("nombre", "texto", True), ("cargo", "texto", True),
-                     ("rol", "opcion:gerencia|encargado_actualizacion", True), ("activo", "opcion:si|no", True)],
+                     ("rol", "opcion:gerencia|encargado_actualizacion", True), ("activo", "opcion:si|no", True), ("correo", "texto", False)],
 }
 # Quién puede cambiar cada tabla: la gerencia (cargos sobre el auditor) mantiene la estructura del registro;
 # los encargados de actualización de obra cargan el seguimiento. El auditor solo lee, desde LupIA.
@@ -119,7 +121,8 @@ DESCRIPCIONES = {
                  "fuente": "De dónde sale (por ejemplo, comunicado del MTSS)."},
     "responsables": {"nombre": "Nombre de la persona que mantiene el registro.", "cargo": "Su cargo.",
                      "rol": "gerencia: crea y cambia obras, cámaras y feriados. encargado_actualizacion: carga avance, pagos, cambios de contrato y reportes.",
-                     "activo": "si, mientras la persona tenga ese rol; no, cuando deje de tenerlo (no se borra, para conservar el historial)."},
+                     "activo": "si, mientras la persona tenga ese rol; no, cuando deje de tenerlo (no se borra, para conservar el historial).",
+                     "correo": "Correo donde recibe los reportes de datos que hacen los auditores; de preferencia un buzón institucional. Vacío si no los recibe."},
 }
 for _tabla in DESCRIPCIONES:
     if _tabla != "responsables":
@@ -222,7 +225,11 @@ def _convertir(df: pd.DataFrame, tabla: str, problemas: list) -> pd.DataFrame:
     out = df.copy()
     for col, tipo, obligatoria in TABLAS[tabla]:
         if col not in out.columns:
-            problemas.append(Problema("error", tabla, 0, f"Falta la columna «{col}»."))
+            if obligatoria:
+                problemas.append(Problema("error", tabla, 0, f"Falta la columna «{col}»."))
+            else:
+                problemas.append(Problema("aviso", tabla, 0, f"Falta la columna «{col}». Agréguela en la fila 1 de la pestaña; "
+                                          "mientras tanto se toma como vacía."))
             out[col] = ""
         valores = out[col].astype(str).str.strip()
         vacios = valores == ""
@@ -296,6 +303,9 @@ def _revisar(t: dict, problemas: list):
         if pd.notna(c["hasta"]) and c["hasta"] < c["desde"]:
             problemas.append(Problema("error", "camaras", i + 2, "«hasta» es anterior a «desde»."))
     resp = t["responsables"]
+    for i, correo in resp["correo"].items():
+        if correo and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(correo)):
+            problemas.append(Problema("aviso", "responsables", i + 2, f"«{correo}» no parece un correo válido."))
     rol = dict(zip(resp["nombre"], resp["rol"]))
     activos = set(resp.loc[resp["activo"] == "si", "nombre"])
     for tabla in TABLAS:

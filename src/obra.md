@@ -467,3 +467,52 @@ function descargar() {
   </div>
   <p class="siguiente no-imprimir">${html`Siguiente en la lista: <a href=${`./obra.html?id=${siguiente.obra_id}`}>${siguiente.orden}. ${siguiente.nombre}</a>`}</p>
 </section>
+
+```js
+// Reportar un dato que no cuadra: el auditor no edita el registro; le avisa a quien lo mantiene
+const responsables = await FileAttachment("data/responsables.csv").csv({typed: true});
+const receptores = responsables.filter((d) => d.activo === "si" && d.correo);
+const formReporte = Inputs.form({
+  dato: Inputs.select(["Avance reportado", "Pagos", "Datos del contrato", "Cambios de contrato", "Cámara o fotos", "Ubicación", "Reportes ciudadanos", "Otro"], {label: "¿Qué dato?"}),
+  problema: Inputs.textarea({label: "¿Qué no cuadra?", rows: 3, placeholder: "Por ejemplo: el informe del 15 de noviembre dice 67,7 %, pero el oficio de la ejecutora indica 62 %."}),
+  respaldo: Inputs.text({label: "¿Dónde lo comprobó?", placeholder: "Documento, oficio o visita (opcional)"})
+});
+const reporte = Generators.input(formReporte);
+```
+
+```js
+function textoReporte(r) {
+  return [
+    `Obra: ${o.nombre} (${o.obra_id}), ${o.canton}`,
+    `Dato: ${r.dato}`,
+    `Qué no cuadra: ${r.problema.trim()}`,
+    `Dónde lo comprobó: ${r.respaldo.trim() || "No indicado"}`,
+    `Datos de LupIA al ${fechaTexto(resumen.fecha_corte)}`,
+    `Ficha: ${location.origin}${location.pathname}?id=${o.obra_id}`
+  ].join("\n");
+}
+function accionesReporte(r) {
+  if (!r.problema.trim()) return html`<p class="nota-tabla">Escriba qué no cuadra para preparar el reporte.</p>`;
+  const asunto = `LupIA: dato por revisar en ${o.nombre}`;
+  const href = `mailto:${receptores.map((d) => d.correo).join(",")}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(textoReporte(r))}`;
+  const copiar = async (e) => {
+    const boton = e.currentTarget;
+    try { await navigator.clipboard.writeText(`${asunto}\n\n${textoReporte(r)}`); boton.textContent = "Texto copiado"; }
+    catch { boton.textContent = "No se pudo copiar"; }
+  };
+  return html`<div class="lupia-acciones">
+    <a class="boton" href=${href}>Enviar por correo</a>
+    <button class="boton secundario" type="button" onclick=${copiar}>Copiar el texto</button>
+  </div>
+  <p class="nota-tabla">${receptores.length
+    ? `Le llega a ${receptores.map((d) => `${d.nombre} (${d.rol.toLowerCase()})`).join(" y ")}, que corrige el registro si hace falta.`
+    : "La gerencia todavía no registró un correo para recibir reportes: el correo se abre sin destinatario. También puede copiar el texto y enviarlo por otro medio."}</p>`;
+}
+```
+
+<details class="reportar no-imprimir">
+  <summary>Reportar un dato que no cuadra</summary>
+  <p>LupIA no le deja cambiar datos, pero sí avisar a quien mantiene el registro. El reporte sale con la obra, la fecha de los datos y el enlace a esta ficha.</p>
+  ${formReporte}
+  ${accionesReporte(reporte)}
+</details>
