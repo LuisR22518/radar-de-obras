@@ -1,14 +1,14 @@
-# Radar de Obras
+# LupIA
 
-Prototipo de visualización para priorizar la fiscalización de obra pública con los datos de **dIAra** (CGR y Universidad CENFOTEC). Proyecto integrador del curso BCD 8215 Visualización de datos, LEAD University, 2026.
+LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalización de obra pública con los datos de **dIAra** (CGR y Universidad CENFOTEC). Proyecto integrador del curso BCD 8215 Visualización de datos, LEAD University, 2026.
 
 > Prototipo académico. No es una herramienta oficial de la Contraloría General de la República. Las detecciones son simuladas con el formato real de dIAra, y las obras y los contratistas están seudonimizados.
 
-El Radar le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene tres páginas:
+LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene tres páginas:
 
-- **Cartera:** frase resumen, matriz de actividad por semana, riesgo frente a monto, desglose del puntaje con pesos ajustables y cola de dispositivos.
+- **Orden de revisión:** la obra que conviene revisar primero y por qué, el orden de todas las obras con su pulso de 12 semanas y sus señales, riesgo frente a monto y pesos ajustables.
 - **Análisis de obra:** alertas explicadas, línea de tiempo con contexto (feriados, suspensiones, lluvia y reportes ciudadanos), contraste entre lo reportado y lo observado, visor de evidencia, comparación y registro con expediente descargable.
-- **Metodología y datos:** reglas, umbrales, procedencia y limitaciones.
+- **Metodología:** reglas, umbrales, procedencia y limitaciones.
 
 ## Cómo correrlo en tu computadora
 
