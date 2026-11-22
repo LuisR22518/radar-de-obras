@@ -12,8 +12,8 @@ const base = senales;
 ```
 
 ```js
-// Búsqueda libre: obra, cantón, contratista o institución
-const busqueda = Inputs.text({label: "Buscar", placeholder: "Obra, cantón, contratista o institución", width: "100%"});
+// Búsqueda libre: obra, cantón, provincia, contratista o institución
+const busqueda = Inputs.text({label: "Buscar", placeholder: "Obra, cantón, provincia, contratista o institución", width: "100%"});
 const texto = Generators.input(busqueda);
 
 // Importancia de cada señal (solo cambia el orden dentro de «Necesitan revisión»)
@@ -31,7 +31,7 @@ function restablecerPesos() {
 const sinTildes = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const lista = ordenar(base, pesos);
 const consulta = sinTildes(texto).trim();
-const coincide = (o) => !consulta || [o.nombre, o.canton, o.contratista, o.institucion_ejecutora, o.tipo, o.obra_id].some((v) => sinTildes(v).includes(consulta));
+const coincide = (o) => !consulta || [o.nombre, o.canton, o.provincia, o.contratista, o.institucion_ejecutora, o.tipo, o.obra_id].some((v) => sinTildes(v).includes(consulta));
 const visibles = lista.filter(coincide);
 const activo = consulta ? new Set(visibles.map((o) => o.obra_id)) : null;
 const nRevisar = lista.filter((o) => o.estado === "revisar").length;
