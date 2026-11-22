@@ -20,6 +20,7 @@ from radar import lectura as L  # noqa: E402
 from radar import reglas as R  # noqa: E402
 
 resultados = []
+omitidas = []
 
 
 def revisar(descripcion: str, condicion: bool):
@@ -59,28 +60,53 @@ def main():
             diario.groupby("obra_id").size().reindex(esperados.index).eq(esperados).all())
     revisar("Ninguna cámara recibe más fotos de las esperadas", diario["cobertura"].dropna().le(1).all())
 
-    # 3. Escenarios simulados
-    revisar("A (paralizada, monto alto) tiene la prioridad 1", sen.loc["A", "prioridad"] == 1)
-    revisar("A tiene alerta de inactividad", "inactividad" in alertas["A"])
-    revisar("B (cámara caída) está en la cola de dispositivos y no compite como obra",
-            sen.loc["B", "en_cola_dispositivos"] and not sen.loc["B", "amerita_revision"])
-    revisar("C tiene alerta de brecha entre lo reportado y lo observado", "brecha" in alertas["C"])
-    revisar("D (atrasada, con prórroga) tiene alertas de atraso y de contrato", {"atraso", "contrato"} <= set(alertas["D"]))
-    revisar("E tiene alerta de inactividad con explicación de suspensión",
-            "inactividad" in alertas["E"] and "suspensión" in str(sen.loc["E", "explicacion_inactividad"]))
-    revisar("F (activa y al día) no tiene alertas", alertas["F"] == [""])
-    revisar("G (terminada) no tiene alertas", sen.loc["G", "fase"] == "terminada" and alertas["G"] == [""])
-    revisar("H tiene alertas de reportes ciudadanos y de contrato", {"ciudadania", "contrato"} <= set(alertas["H"]))
+    # 3. Escenarios simulados. El gestor puede cambiar el registro: cada prueba corre solo si la obra
+    #    sigue con el escenario para el que se diseñó; si no, se omite (no bloquea la publicación).
+    obras = reg["obras"]
+
+    def escenario(oid, esperado):
+        if oid in obras.index and oid in sen.index and obras.loc[oid, "escenario_simulado"] == esperado:
+            return True
+        omitidas.append(oid)
+        return False
+
+    if escenario("A", "paralizada"):
+        revisar("A (paralizada) necesita revisión con alerta de inactividad",
+                sen.loc["A", "amerita_revision"] and "inactividad" in alertas["A"])
+        originales = [o for o in "ABCDEFGH" if o in sen.index]
+        revisar("A (paralizada, monto alto) va primero entre las obras de ejemplo",
+                sen.loc["A", "prioridad"] == sen.loc[originales, "prioridad"].min())
+    if escenario("B", "falla_camara"):
+        revisar("B (cámara caída) está en la cola de dispositivos y no compite como obra",
+                sen.loc["B", "en_cola_dispositivos"] and not sen.loc["B", "amerita_revision"])
+    if escenario("C", "esporadica"):
+        revisar("C tiene alerta de brecha entre lo reportado y lo observado", "brecha" in alertas["C"])
+    if escenario("D", "lenta"):
+        revisar("D (atrasada, con prórroga) tiene alertas de atraso y de contrato", {"atraso", "contrato"} <= set(alertas["D"]))
+    if escenario("E", "normal"):
+        revisar("E tiene alerta de inactividad con explicación de suspensión",
+                "inactividad" in alertas["E"] and "suspensión" in str(sen.loc["E", "explicacion_inactividad"]))
+    if escenario("F", "normal"):
+        revisar("F (activa y al día) no tiene alertas", alertas["F"] == [""])
+    if escenario("G", "terminada"):
+        revisar("G (terminada) no tiene alertas", sen.loc["G", "fase"] == "terminada" and alertas["G"] == [""])
+    if escenario("H", "normal"):
+        revisar("H tiene alertas de reportes ciudadanos y de contrato", {"ciudadania", "contrato"} <= set(alertas["H"]))
 
     # 4. Obra real del piloto
-    p = diario[diario["obra_id"] == "P"]
-    revisar("P (piloto real) usa los 8 días publicados por dIAra", int((p["estado"] != "sin_datos").sum()) == 8)
-    revisar("P es histórica: no compite en la lista de revisión", sen.loc["P", "historica"] and not sen.loc["P", "amerita_revision"])
-    revisar("P no calcula las señales de contrato porque no hay contrato registrado",
-            sen.loc["P", ["senal_atraso", "senal_brecha", "senal_contrato"]].isna().all())
+    if "P" in sen.index:
+        p = diario[diario["obra_id"] == "P"]
+        revisar("P (piloto real) usa los 8 días publicados por dIAra", int((p["estado"] != "sin_datos").sum()) == 8)
+        revisar("P es histórica: no compite en la lista de revisión", sen.loc["P", "historica"] and not sen.loc["P", "amerita_revision"])
+        revisar("P no calcula las señales de contrato porque no hay contrato registrado",
+                sen.loc["P", ["senal_atraso", "senal_brecha", "senal_contrato"]].isna().all())
+    else:
+        omitidas.append("P")
 
     for descripcion, ok in resultados:
         print(("OK    " if ok else "FALLA ") + descripcion)
+    if omitidas:
+        print(f"OMITIDA pruebas de escenario de {', '.join(omitidas)}: el gestor cambió esas obras en el registro.")
     fallas = sum(not ok for _, ok in resultados)
     print(f"\n{len(resultados) - fallas} de {len(resultados)} pruebas pasaron.")
     sys.exit(1 if fallas else 0)

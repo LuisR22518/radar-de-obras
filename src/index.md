@@ -129,7 +129,7 @@ function puntajes() {
   return html`<table class="puntajes">
     <caption class="sr-only">Puntaje de atención de cada obra</caption>
     <thead><tr><th scope="col">Obra</th><th scope="col">Puntaje de 0 a 100</th></tr></thead>
-    <tbody>${datos.map((o) => html`<tr><td>${o.orden}. ${o.nombre}</td>
+    <tbody>${datos.map((o) => html`<tr><td>${o.orden}. ${o.nombre}${o.senales_con_dato < 5 ? html`<br><small class="tenue">con ${o.senales_con_dato} de 5 señales; faltan datos del contrato</small>` : ""}</td>
       <td><div class="barra"><b>${Math.round(o.puntaje_vivo)}</b><i><span class=${o.estado} style=${`width: ${o.puntaje_vivo}%`}></span></i></div></td></tr>`)}</tbody>
   </table>`;
 }
@@ -155,7 +155,7 @@ function dispersion(width) {
     <summary>¿Cómo decide LupIA el orden?</summary>
     <div class="panel-cuerpo dos-columnas">
       <div>
-        <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje.</p>
+        <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje. Si a una obra le falta un dato, como el contrato, el puntaje se calcula con las señales que sí tienen dato.</p>
         <dl class="senales-texto">${SENALES.map((s) => html`<div><dt>${s.label}</dt><dd>${SENTIDO[s.key]}</dd></div>`)}</dl>
         <p><a href="./metodologia.html">Ver el detalle de cada cálculo</a></p>
       </div>

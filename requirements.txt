@@ -1,3 +1,4 @@
 pandas>=2.0
 numpy>=1.24
 pillow>=10.0  # solo para scripts/anonimizar_fotos.py
+openpyxl>=3.1  # leer la hoja del registro (.xlsx)

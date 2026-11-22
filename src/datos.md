@@ -31,7 +31,7 @@ LupIA junta tres capas. Cada una tiene un responsable distinto, y el auditor sol
   <li>
     <h2>El registro de obras</h2>
     <p>La base de datos propia de LupIA: obras, cámaras asignadas, contratos, avance reportado, pagos, reportes ciudadanos y feriados. La mantiene el gestor de datos en una hoja de Google; LupIA la lee sola cada hora.</p>
-    <p class="cifras">${resumen.registro_actualizado ? `Última lectura de la hoja: ${resumen.registro_actualizado}.` : "Todavía no se ha leído desde la hoja: se usa la copia guardada en el repositorio."}</p>
+    <p class="cifras">${resumen.registro_leido ? `Última lectura de la hoja: ${resumen.registro_leido.replace("T", ", ")}.` : "En esta versión no se leyó la hoja: se usa la copia guardada en el repositorio."} ${resumen.registro_actualizado ? `Último cambio aplicado: ${resumen.registro_actualizado.replace("T", ", ")}.` : ""}</p>
     ${resumen.registro_hoja ? html`<p><a class="boton secundario" href=${resumen.registro_hoja} target="_blank" rel="noopener">Abrir el registro (solo gestores)</a></p>` : ""}
   </li>
   <li>
@@ -76,7 +76,7 @@ function tablaBitacora() {
 
 ## Calidad del registro
 
-${errores.length ? html`<p><strong>El registro tiene ${plural(errores.length, "error", "errores")}.</strong> LupIA sigue usando la última versión buena hasta que se corrijan.</p>` : html`<p>El registro no tiene errores.</p>`}
+${errores.length ? html`<p><strong>La hoja tiene ${plural(errores.length, "error", "errores")}.</strong> LupIA no aplicó el último cambio y sigue usando la última versión buena hasta que se corrijan.</p>` : html`<p>El registro no tiene errores.${avisos.length ? ` Tiene ${plural(avisos.length, "aviso", "avisos")}: datos que se pueden usar pero conviene revisar.` : ""}</p>`}
 
 ${tablaCalidad()}
 

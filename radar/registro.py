@@ -56,6 +56,57 @@ CLAVES = {"obras": ["obra_id"], "camaras": ["camara_id", "desde"], "eventos_cont
 NOMBRES = {"obras": "Obras", "camaras": "Cámaras", "eventos_contrato": "Cambios de contrato",
            "avance_reportado": "Avance reportado", "pagos": "Pagos", "reportes_ciudadanos": "Reportes ciudadanos",
            "feriados": "Feriados"}
+# Qué poner en cada columna (lo usan la pestaña LEEME de la hoja y la documentación)
+DESCRIPCIONES = {
+    "obras": {
+        "obra_id": "Código corto y único de la obra (por ejemplo, A o P). No se cambia una vez creado.",
+        "nombre": "Nombre de la obra como lo verá el auditor.",
+        "tipo": "Puente, Camino, Acueducto, Alcantarillado, Edificio educativo, Edificio de salud, etc.",
+        "provincia": "Provincia donde está la obra.", "canton": "Cantón donde está la obra.",
+        "lat": "Latitud en grados decimales (por ejemplo, 9.3745).", "lon": "Longitud en grados decimales (por ejemplo, -83.7037).",
+        "institucion_ejecutora": "Institución que contrata y supervisa la obra.",
+        "contratista": "Empresa contratista. Vacío si no se conoce.",
+        "monto_original_crc": "Monto original del contrato en colones, sin separadores. Vacío si no se conoce.",
+        "fecha_inicio": "Fecha de la orden de inicio. Vacío si no se conoce.",
+        "fecha_fin_original": "Fecha de fin según el contrato original. Las prórrogas van en cambios de contrato.",
+        "fuente_datos": "dIAra real, si la cámara es real; simulado, si es una obra de prueba.",
+        "escenario_simulado": "Solo obras simuladas: normal, paralizada, esporadica, lenta, falla_camara o terminada.",
+        "escenario_desde": "Solo para paralizada, falla_camara y terminada: desde qué fecha.",
+        "estado_registro": "activa: aparece en LupIA. archivada: se conserva pero no aparece.",
+        "nota": "Comentario libre del gestor.",
+    },
+    "camaras": {
+        "camara_id": "Código de la cámara (por ejemplo, CAM-A). Debe coincidir con su carpeta de datos.",
+        "obra_id": "Obra donde está instalada (código de la pestaña obras).",
+        "desde": "Fecha de instalación en esta obra.", "hasta": "Fecha de retiro. Vacío si sigue instalada.",
+        "inventario_fotos": "si, si la cámara informa cuántas fotos tomó cada día; no, si solo hay detecciones.",
+        "nota": "Comentario libre.",
+    },
+    "eventos_contrato": {
+        "obra_id": "Código de la obra.", "fecha": "Fecha de aprobación del cambio.",
+        "tipo": "modificacion_monto, prorroga, suspension o recepcion_provisional.",
+        "detalle": "Descripción corta del cambio.", "dias_prorroga": "Solo prórrogas: días que se suman al plazo.",
+        "monto_nuevo_crc": "Solo modificaciones de monto: el nuevo monto total.",
+        "suspension_desde": "Solo suspensiones: primer día.", "suspension_hasta": "Solo suspensiones: último día.",
+        "documento": "Número de adenda, oficio o resolución que lo respalda.",
+    },
+    "avance_reportado": {
+        "obra_id": "Código de la obra.", "fecha": "Fecha del informe.",
+        "avance_reportado_pct": "Avance físico que reporta la ejecutora, de 0 a 100.",
+        "documento": "Informe que lo respalda.",
+    },
+    "pagos": {
+        "obra_id": "Código de la obra.", "fecha": "Fecha de corte del pago.",
+        "pagado_acumulado_crc": "Total pagado hasta esa fecha, en colones.", "documento": "Orden de pago que lo respalda.",
+    },
+    "reportes_ciudadanos": {
+        "obra_id": "Código de la obra.", "fecha": "Fecha del reporte.", "tipo": "obra detenida, seguridad, calidad u otro.",
+        "descripcion": "Lo que reporta la persona, en pocas palabras.", "con_foto": "si o no.",
+        "canal": "Por dónde llegó (denuncia CGR, inspector ciudadano, etc.).",
+    },
+    "feriados": {"fecha": "Fecha del feriado (la de su disfrute, si se trasladó).", "nombre": "Nombre del feriado.",
+                 "fuente": "De dónde sale (por ejemplo, comunicado del MTSS)."},
+}
 # Rectángulo que contiene a Costa Rica (con un margen): un punto fuera es casi seguro un error de digitación
 LAT_CR, LON_CR = (8.0, 11.3), (-86.0, -82.5)
 
@@ -79,6 +130,70 @@ class Registro:
     @property
     def errores(self):
         return [p for p in self.problemas if p.nivel == "error"]
+
+
+def _texto(v, tipo: str) -> str:
+    """Valor de una celda de la hoja como texto canónico: fechas AAAA-MM-DD y números sin separadores."""
+    if v is None or (isinstance(v, float) and pd.isna(v)) or (not isinstance(v, str) and pd.isna(v)):
+        return ""
+    if tipo == "fecha" and hasattr(v, "strftime"):
+        return v.strftime("%Y-%m-%d")
+    if isinstance(v, bool):
+        return "si" if v else "no"
+    if isinstance(v, (int, float)):
+        return str(int(v)) if float(v).is_integer() else repr(float(v))
+    texto = str(v).strip()
+    if tipo == "fecha" and len(texto) > 10 and texto[4] == "-":
+        texto = texto[:10]  # "2026-08-31 00:00:00" -> "2026-08-31"
+    if tipo == "numero":
+        try:
+            n = float(texto)
+            return str(int(n)) if n.is_integer() else repr(n)
+        except ValueError:
+            pass  # se deja como está: la validación lo marcará como error
+    return texto
+
+
+def canonico(crudo: dict) -> dict:
+    """Pasa cada valor a su forma canónica, para comparar versiones sin diferencias falsas."""
+    out = {}
+    for tabla, cols in TABLAS.items():
+        df = crudo[tabla].copy()
+        for col, tipo, _ in cols:
+            if col in df.columns:
+                df[col] = [_texto(v, tipo) for v in df[col]]
+        out[tabla] = df
+    return out
+
+
+def guardar(crudo: dict, carpeta=C.REGISTRO):
+    for tabla, cols in TABLAS.items():
+        df = crudo[tabla]
+        df[[c for c, _, _ in cols if c in df.columns]].to_csv(carpeta / f"{tabla}.csv", index=False)
+
+
+def leer_hoja(archivo_xlsx) -> dict:
+    """Lee la hoja de Google descargada como .xlsx y devuelve cada tabla como texto canónico.
+
+    Se usa .xlsx y no CSV porque el CSV de Google escribe números y fechas según el idioma de la hoja
+    (por ejemplo, 67,7 en vez de 67.7); el .xlsx trae los valores tal cual.
+    """
+    libro = pd.read_excel(archivo_xlsx, sheet_name=None, dtype=object)
+    crudo = {}
+    for tabla, cols in TABLAS.items():
+        if tabla not in libro:
+            crudo[tabla] = pd.DataFrame(columns=[c for c, _, _ in cols])
+            continue
+        df = libro[tabla].dropna(how="all")
+        df.columns = [str(c).strip() for c in df.columns]
+        out = pd.DataFrame(index=range(len(df)))
+        tipos = {c: tipo for c, tipo, _ in cols}
+        for col in df.columns:
+            if col.startswith("Unnamed"):
+                continue
+            out[col] = [_texto(v, tipos.get(col, "texto")) for v in df[col]]
+        crudo[tabla] = out
+    return crudo
 
 
 def leer_crudo(carpeta=C.REGISTRO) -> dict:

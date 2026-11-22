@@ -122,12 +122,16 @@ def calcular() -> dict:
     sen = R.senales(obras, camaras, eventos, diario, semanal, avance, pagos, reportes, inventario)
     res = R.resumen(sen)
     res["origen_clima"] = sorted(clima["origen"].unique().tolist())
-    res["registro_actualizado"] = (C.REGISTRO / "actualizado.txt").read_text(encoding="utf-8").strip() \
-        if (C.REGISTRO / "actualizado.txt").exists() else ""
-    res["registro_hoja"] = json.loads((C.REGISTRO / "fuente.json").read_text(encoding="utf-8")).get("url", "") \
-        if (C.REGISTRO / "fuente.json").exists() else ""
-    calidad = pd.DataFrame([[REG.NOMBRES[p.tabla], p.fila, p.nivel, p.mensaje] for p in reg.problemas],
-                           columns=["tabla", "fila", "nivel", "mensaje"])
+    leer = lambda nombre: (C.REGISTRO / nombre).read_text(encoding="utf-8") if (C.REGISTRO / nombre).exists() else ""  # noqa: E731
+    res["registro_actualizado"] = leer("actualizado.txt").strip()
+    res["registro_hoja"] = json.loads(leer("fuente.json")).get("url", "") if leer("fuente.json") else ""
+    intento = json.loads(leer("intento.json")) if leer("intento.json") else {}
+    res["registro_leido"] = intento.get("fecha_hora", "")
+    res["registro_rechazado"] = intento.get("aceptado") is False
+    filas = [[REG.NOMBRES[p.tabla], p.fila, p.nivel, p.mensaje] for p in reg.problemas]
+    if res["registro_rechazado"]:  # errores de la versión de la hoja que no se aceptó
+        filas = [[p["tabla"], p["fila"], p["nivel"], p["mensaje"]] for p in intento["problemas"] if p["nivel"] == "error"] + filas
+    calidad = pd.DataFrame(filas, columns=["tabla", "fila", "nivel", "mensaje"])
     bitacora = pd.read_csv(C.REGISTRO / "bitacora.csv").tail(50).iloc[::-1]
     return {
         "obras": obras.reset_index(drop=True), "estado_diario": diario, "matriz_semanal": semanal,

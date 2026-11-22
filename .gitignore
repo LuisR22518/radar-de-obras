@@ -6,3 +6,4 @@ __pycache__/
 .DS_Store
 datos/simulados/
 datos/clima.csv
+datos/registro/intento.json

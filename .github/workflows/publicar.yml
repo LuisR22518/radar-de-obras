@@ -1,15 +1,16 @@
-# Canal de datos automatizado: cada día (y en cada cambio) recalcula el Radar y publica el sitio.
-name: Recalcular y publicar el Radar
+# Canal de datos automatizado: cada hora lee el registro de obras desde la hoja de Google,
+# recalcula LupIA y publica el sitio. También corre con cada cambio en el repositorio.
+name: Recalcular y publicar LupIA
 
 on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 12 * * *"   # todos los días a las 6:00 de Costa Rica (12:00 UTC)
+    - cron: "17 * * * *"   # cada hora, al minuto 17
   workflow_dispatch: {}
 
 permissions:
-  contents: read
+  contents: write   # para guardar en el repositorio los cambios que el gestor hizo en la hoja
   pages: write
   id-token: write
 
@@ -26,7 +27,19 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - name: Datos simulados (semilla fija) y lluvia real de Open-Meteo
+      - name: Leer el registro de obras desde la hoja de Google
+        run: python scripts/registro.py
+      - name: Guardar en el repositorio los cambios del registro (con su bitácora)
+        run: |
+          if [ -n "$(git status --porcelain datos/registro)" ]; then
+            git config user.name "LupIA (registro)"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add datos/registro
+            git commit -m "Registro de obras: cambios del gestor desde la hoja"
+            git pull --rebase
+            git push
+          fi
+      - name: Obras simuladas a partir del piloto real y lluvia de Open-Meteo
         run: |
           python scripts/generar_simulados.py
           python scripts/clima.py
