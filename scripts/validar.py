@@ -103,6 +103,17 @@ def main():
     else:
         omitidas.append("P")
 
+    # 5. Mantenimiento del registro
+    man = pd.read_csv(C.SALIDAS / "mantenimiento.csv").set_index("obra_id")
+    activas = sen[~sen["historica"].astype(bool)]
+    revisar("Mantenimiento: incluye todas las obras en seguimiento y ninguna con monitoreo terminado",
+            set(man.index) == set(activas.index))
+    revisar("Mantenimiento: cada cámara sin datos aparece para enviar a mantenimiento",
+            set(man.index[man["camara_a_mantenimiento"]]) == set(activas.index[activas["en_cola_dispositivos"].astype(bool)]))
+    terminadas = man[man["fase"] == "terminada"]
+    revisar("Mantenimiento: una obra terminada no tiene informes ni pagos vencidos",
+            not (terminadas["informe_vencido"] | terminadas["pago_vencido"]).any())
+
     for descripcion, ok in resultados:
         print(("OK    " if ok else "FALLA ") + descripcion)
     if omitidas:

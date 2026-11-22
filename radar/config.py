@@ -75,6 +75,9 @@ NOMBRES_SENALES = {
     "ciudadania": "Reportes ciudadanos",
 }
 DIAS_SIN_DATOS_DISPOSITIVO = 3  # días seguidos sin datos que mandan la cámara a mantenimiento
+# Mantenimiento del registro: cuándo un dato se considera vencido
+VENCE_INFORME_DIAS = 30  # días desde el último informe de avance registrado
+VENCE_PAGO_DIAS = 45     # días desde el último pago registrado
 
 SEMILLA = 2026  # misma semilla = mismos datos simulados en cualquier computadora
 

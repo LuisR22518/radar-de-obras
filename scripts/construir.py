@@ -10,7 +10,7 @@ Salidas:
   evidencia.csv        fotos de los últimos 21 días de cada obra con sus detecciones (visor de evidencia)
   eventos.csv          contexto en la línea de tiempo: contrato, feriados y reportes
   fuentes.csv          de dónde viene cada dato de cada obra (real, simulado o registro)
-  estado_publico.csv   estado observado de cada obra para la ciudadanía, sin puntajes ni alertas
+  mantenimiento.csv    qué tan al día está el registro de cada obra (informes, pagos, cámara, contrato)
   calidad.csv          problemas de calidad encontrados en el registro
   bitacora.csv         últimos cambios hechos al registro, con quién los hizo
   responsables.csv     quién mantiene el registro y con qué rol
@@ -100,29 +100,40 @@ def evidencia(diario, inventario, lectura, dias=21) -> pd.DataFrame:
     return out[cols].sort_values(["obra_id", "fecha_hora"]).reset_index(drop=True)
 
 
-def estado_publico(sen, semanal, diario) -> pd.DataFrame:
-    """Lo que se puede mostrar a la ciudadanía (por ejemplo, en obrapublica.info): el estado observado
-    de cada obra, sin puntajes, alertas ni decisiones, que son información interna de fiscalización."""
-    etiquetas = {"actividad": "Con actividad", "sin_actividad": "Sin actividad", "sin_datos": "Sin datos de la cámara",
-                 "terminada": "Obra terminada"}
+def mantenimiento(obras, sen, avance, pagos) -> pd.DataFrame:
+    """Qué tan al día está el registro de cada obra en seguimiento: último informe de avance, último pago,
+    última foto de la cámara y datos del contrato. Lo usa la página de Mantenimiento."""
+    corte = pd.Timestamp(C.FECHA_CORTE)
+    campos_contrato = {"monto_original_crc": "monto", "fecha_inicio": "fecha de inicio",
+                       "fecha_fin_original": "fecha de fin", "contratista": "contratista"}
+
+    def ultimo(tabla, oid):
+        filas = tabla[tabla["obra_id"] == oid].sort_values("fecha")
+        return filas.iloc[-1] if len(filas) else None
+
     filas = []
-    for _, o in sen.iterrows():
-        sem = semanal[semanal["obra_id"] == o["obra_id"]].sort_values("semana")
-        ultimas = sem.tail(12)
-        con_dato = ultimas[ultimas["estado_semana"].isin(["actividad", "sin_actividad"])]
-        activo = diario[(diario["obra_id"] == o["obra_id"]) & (diario["estado"] == "actividad")]["fecha"].max()
-        if o["historica"]:
-            estado = "Monitoreo terminado"
-        elif o["en_cola_dispositivos"]:
-            estado = "Sin datos de la cámara"
-        else:
-            estado = etiquetas[sem["estado_semana"].iloc[-1]] if len(sem) else "Sin datos de la cámara"
-        filas.append([o["obra_id"], o["nombre"], o["tipo"], o["canton"], o["provincia"], estado,
-                      f"{int((con_dato['estado_semana'] == 'actividad').sum())} de {len(con_dato)}",
-                      activo.date() if pd.notna(activo) else None, o["fecha_corte_obra"],
-                      "Real (piloto de dIAra)" if o["fuente_datos"] == "dIAra real" else "Simulado"])
-    return pd.DataFrame(filas, columns=["obra_id", "nombre", "tipo", "canton", "provincia", "estado_esta_semana",
-                                        "semanas_con_actividad", "ultimo_dia_con_actividad", "datos_al", "origen"])
+    for _, s in sen[~sen["historica"]].iterrows():
+        oid, obra = s["obra_id"], obras.loc[s["obra_id"]]
+        terminada = s["fase"] == "terminada"
+        inf, pag = ultimo(avance, oid), ultimo(pagos, oid)
+        dias_inf = (corte - inf["fecha"]).days if inf is not None else None
+        dias_pag = (corte - pag["fecha"]).days if pag is not None else None
+        faltan = [n for c, n in campos_contrato.items() if pd.isna(obra.get(c))]
+        inf_vencido = not terminada and (dias_inf is None or dias_inf > C.VENCE_INFORME_DIAS)
+        pag_vencido = not terminada and (dias_pag is None or dias_pag > C.VENCE_PAGO_DIAS)
+        camara = bool(s["en_cola_dispositivos"])
+        filas.append([oid, s["nombre"], s["fase"],
+                      inf["fecha"].date() if inf is not None else None, inf.get("documento") if inf is not None else None,
+                      dias_inf, inf_vencido,
+                      pag["fecha"].date() if pag is not None else None, pag.get("documento") if pag is not None else None,
+                      dias_pag, pag_vencido,
+                      str(s["ultima_captura"])[:10] if pd.notna(s["ultima_captura"]) else None, int(s["dias_sin_datos"]),
+                      camara, ", ".join(faltan),
+                      not (inf_vencido or pag_vencido or camara or faltan)])
+    return pd.DataFrame(filas, columns=["obra_id", "nombre", "fase", "ultimo_informe", "documento_informe",
+                                        "dias_informe", "informe_vencido", "ultimo_pago", "documento_pago", "dias_pago",
+                                        "pago_vencido", "ultima_foto", "dias_sin_datos", "camara_a_mantenimiento",
+                                        "contrato_faltante", "al_dia"])
 
 
 def fuentes(obras, camaras, lectura) -> pd.DataFrame:
@@ -154,6 +165,8 @@ def calcular() -> dict:
     sen = R.senales(obras, camaras, eventos, diario, semanal, avance, pagos, reportes, inventario)
     res = R.resumen(sen)
     res["origen_clima"] = sorted(clima["origen"].unique().tolist())
+    res["vence_informe_dias"], res["vence_pago_dias"] = C.VENCE_INFORME_DIAS, C.VENCE_PAGO_DIAS
+    res["dias_sin_datos_camara"] = C.DIAS_SIN_DATOS_DISPOSITIVO
     leer = lambda nombre: (C.REGISTRO / nombre).read_text(encoding="utf-8") if (C.REGISTRO / nombre).exists() else ""  # noqa: E731
     res["registro_actualizado"] = leer("actualizado.txt").strip()
     res["registro_hoja"] = json.loads(leer("fuente.json")).get("url", "") if leer("fuente.json") else ""
@@ -171,7 +184,7 @@ def calcular() -> dict:
         "senales": sen, "serie_avance": serie_avance(obras, eventos, avance, pagos),
         "eventos": eventos_linea_tiempo(eventos, feriados, reportes),
         "evidencia": evidencia(diario, inventario, lectura), "fuentes": fuentes(obras, camaras, lectura),
-        "estado_publico": estado_publico(sen, semanal, diario),
+        "mantenimiento": mantenimiento(obras, sen, avance, pagos),
         "calidad": calidad, "bitacora": bitacora, "responsables": responsables, "resumen": res,
     }
 

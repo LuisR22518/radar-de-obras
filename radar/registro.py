@@ -6,7 +6,7 @@ lleva cada tabla, cómo se leen y qué revisiones de calidad se le aplican.
 
 Dos niveles de problema:
   - error: el dato no se puede usar (por ejemplo, una fecha que no es fecha). Si la hoja trae errores,
-    LupIA conserva la última versión buena del registro y lo avisa en la página «Datos».
+    LupIA conserva la última versión buena del registro y lo avisa en la página «Mantenimiento del registro».
   - aviso: el dato se puede usar pero merece revisión (por ejemplo, un avance que retrocede).
 """
 from dataclasses import dataclass, field
@@ -276,8 +276,12 @@ def _revisar(t: dict, problemas: list):
         faltan = [c for c in ("monto_original_crc", "fecha_inicio", "fecha_fin_original", "contratista")
                   if pd.isna(o[c]) or o[c] == ""]
         if faltan and o["estado_registro"] == "activa":
-            problemas.append(Problema("aviso", "obras", f, f"Obra {o['obra_id']}: sin {', '.join(faltan)}. "
-                                      "Las señales que dependen del contrato no se calculan."))
+            legibles = {"monto_original_crc": "monto original", "fecha_inicio": "fecha de inicio",
+                        "fecha_fin_original": "fecha de fin", "contratista": "contratista"}
+            lista = [legibles[c] for c in faltan]
+            texto = lista[0] if len(lista) == 1 else ", ".join(lista[:-1]) + " y " + lista[-1]
+            problemas.append(Problema("aviso", "obras", f, f"Obra {o['obra_id']}: faltan datos del contrato ({texto}). "
+                                      "Sin ellos no se calculan las señales del contrato."))
         if o["estado_registro"] == "activa" and o["obra_id"] not in set(camaras["obra_id"]):
             problemas.append(Problema("aviso", "obras", f, f"Obra {o['obra_id']}: no tiene cámara asignada."))
     # Una cámara no puede estar en dos obras a la vez

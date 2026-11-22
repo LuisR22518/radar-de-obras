@@ -12,7 +12,7 @@ export default {
   title: "LupIA",
   root: "src",
   lang: "es",
-  pages: [{name: "Qué revisar", path: "/index"}, {name: "Análisis de obra", path: "/obra"}, {name: "Datos", path: "/datos"}, {name: "Cómo funciona", path: "/metodologia"}],
+  pages: [{name: "Qué revisar", path: "/index"}, {name: "Análisis de obra", path: "/obra"}, {name: "Datos", path: "/datos"}, {name: "Cómo funciona", path: "/metodologia"}, {name: "Mantenimiento del registro", path: "/mantenimiento"}],
   sidebar: false,
   toc: false,
   pager: false,
@@ -29,7 +29,8 @@ export default {
       .join("")}</nav>`,
   footer:
     "LupIA es un prototipo académico de LEAD University (Visualización de datos, 2026) y no es una herramienta oficial de la Contraloría General de la República. " +
-    "Usa datos reales del piloto de dIAra (CGR, CENFOTEC y GIZ) y obras simuladas a partir de ellos, con nombres seudonimizados. Lluvia: Open-Meteo (CC BY 4.0). Tipografía: Public Sans (OFL).",
+    "Usa datos reales del piloto de dIAra (CGR, CENFOTEC y GIZ) y obras simuladas a partir de ellos, con nombres seudonimizados. Lluvia: Open-Meteo (CC BY 4.0). Tipografía: Public Sans (OFL). " +
+    '<a href="./mantenimiento.html">Mantenimiento del registro</a> (gerencia y encargados).',
   // En Windows el intérprete se llama "python"; en Mac, Linux y GitHub Actions, "python3".
   interpreters: {".py": [process.platform === "win32" ? "python" : "python3"]}
 };

@@ -1,0 +1,9 @@
+obra_id,nombre,fase,ultimo_informe,documento_informe,dias_informe,informe_vencido,ultimo_pago,documento_pago,dias_pago,pago_vencido,ultima_foto,dias_sin_datos,camara_a_mantenimiento,contrato_faltante,al_dia
+A,Puente vehicular,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+H,Alcantarillado pluvial,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+C,Rehabilitación de camino,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+D,Acueducto rural,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+E,EBAIS,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+F,CEN-CINAI,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+G,Salón multiuso,terminada,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-20,0,False,,True
+B,Liceo: pabellón de aulas,en ejecucion,2026-11-15,Informe quincenal de la ejecutora (simulado),5,False,2026-10-31,Orden de pago (simulado),20,False,2026-11-11,9,True,,False

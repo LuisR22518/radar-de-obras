@@ -43,7 +43,7 @@ def leeme(ws):
     filas = [
         ["LupIA · Registro de obras"],
         ["Esta hoja es la base de datos propia de LupIA: lo que no viene de las cámaras de dIAra. Cada cambio que se haga aquí aparece en LupIA en unos 15 minutos."],
-        ["Si LupIA encuentra un error, no aplica el cambio: conserva la última versión buena y muestra qué corregir en su página Datos."],
+        ["Si LupIA encuentra un error, no aplica el cambio: conserva la última versión buena y muestra qué corregir en su página Mantenimiento del registro."],
         [],
         ["Quién hace qué"],
         ["Rol", "Pestañas que mantiene", "Qué hace"],

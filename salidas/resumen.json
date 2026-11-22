@@ -31,6 +31,9 @@
   "origen_clima": [
     "simulado"
   ],
+  "vence_informe_dias": 30,
+  "vence_pago_dias": 45,
+  "dias_sin_datos_camara": 3,
   "registro_actualizado": "",
   "registro_hoja": "https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit",
   "registro_leido": "",

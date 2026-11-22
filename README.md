@@ -12,15 +12,16 @@ LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalizac
 | 2. Simulado | Obras ficticias cuya cámara "ve" fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo | Se regenera en cada corrida (semilla fija) | `datos/simulados/` (no se guarda en el repositorio) |
 | 3. Registro de obras | Base de datos propia: obras, cámaras, contratos, avance, pagos, reportes ciudadanos y feriados | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza cada 15 minutos) |
 
-El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; cada 15 minutos GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Datos** dice qué corregir.
+El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; cada 15 minutos GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Mantenimiento del registro** dice qué corregir.
 
 Para conectar datos nuevos de dIAra no hay que cambiar código: se copia la carpeta de la cámara en `datos/diara/` (el adaptador `radar/diara.py` reconoce el CSV de producción y las etiquetas del piloto) y se registra la cámara en la hoja.
 
-LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene cuatro páginas:
+LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene cinco páginas:
 
 - **Qué revisar:** cuántas obras necesitan revisión, un mapa de Costa Rica y la lista en orden con la razón en palabras; búsqueda, descarga de la lista y, en paneles plegables, cómo se decide el orden, la importancia de cada señal y el cruce de riesgo y monto.
 - **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones (reales en la obra del piloto) y hallazgo y acción: criterio, condición, causa y efecto (NGASP 204), la acción elegida y su seguimiento, con expediente descargable.
-- **Datos:** de dónde sale cada dato de cada obra, quién mantiene el registro, su calidad, los últimos cambios y el estado público de cada obra.
+- **Datos:** para el auditor. De dónde sale cada dato, qué tan al día está cada obra y qué no se puede afirmar con estos datos.
+- **Mantenimiento del registro:** para la gerencia y los encargados de actualización (enlace al pie de cada página). Lo que hay que corregir o poner al día, el estado de cada obra, quién hace qué y los últimos cambios.
 - **Cómo funciona:** los pasos, las cinco señales, de dónde salen los datos y quién los mantiene, y los límites; el detalle técnico va plegado.
 
 ## Cómo correrlo en tu computadora
