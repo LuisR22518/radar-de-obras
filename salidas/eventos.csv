@@ -1,0 +1,14 @@
+obra_id,fecha,categoria,tipo,detalle
+*,2026-08-31,feriado,feriado,Día de la Persona Negra y la Cultura Afrocostarricense
+H,2026-09-10,contrato,modificacion_monto,Aumento de 15 % por obras adicionales de drenaje
+*,2026-09-15,feriado,feriado,Independencia de Costa Rica
+G,2026-09-25,contrato,recepcion_provisional,Recepción provisional de la obra
+D,2026-10-15,contrato,prorroga,Prórroga de 91 días aprobada por la administración
+H,2026-10-22,ciudadania,seguridad,Zanja abierta sin señalización frente a la escuela.
+C,2026-10-28,ciudadania,obra detenida,Pasan días sin maquinaria en el camino.
+H,2026-11-03,ciudadania,calidad,El agua se empoza donde ya trabajaron.
+A,2026-11-06,ciudadania,obra detenida,Desde hace semanas no se ve maquinaria en el puente.
+H,2026-11-10,ciudadania,obra detenida,La zanja sigue abierta y no hay trabajadores desde el lunes.
+E,2026-11-13,contrato,suspension,Orden de suspensión temporal por lluvias intensas
+A,2026-11-17,ciudadania,obra detenida,La obra sigue sin trabajadores; solo hay un guarda.
+H,2026-11-18,ciudadania,seguridad,Material acumulado sobre la vía.

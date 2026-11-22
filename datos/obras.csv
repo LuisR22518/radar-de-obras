@@ -1,0 +1,9 @@
+obra_id,nombre,tipo,provincia,canton,lat,lon,institucion_ejecutora,contratista,monto_original_crc,fecha_inicio,fecha_fin_original,camara_id,origen
+A,Puente vehicular,Puente,San José,Pérez Zeledón,9.3745,-83.7037,Unidad ejecutora vial,Contratista 2,2450000000,2026-03-02,2027-03-01,CAM-A,seudonimizada
+B,Escuela: aulas y comedor,Edificio educativo,Limón,Pococí,10.2118,-83.7869,Unidad ejecutora educativa,Contratista 4,1180000000,2026-05-04,2027-02-26,CAM-B,seudonimizada
+C,Rehabilitación de camino,Camino,Alajuela,Upala,10.8983,-85.0157,Unidad ejecutora vial,Contratista 2,860000000,2026-03-02,2027-04-30,CAM-C,seudonimizada
+D,Acueducto rural,Acueducto,Guanacaste,Nicoya,10.1483,-85.4525,Ente de agua rural,Contratista 5,640000000,2025-11-03,2026-10-30,CAM-D,seudonimizada
+E,EBAIS,Edificio de salud,Limón,Talamanca,9.6290,-82.8520,Unidad ejecutora de salud,Contratista 1,1050000000,2026-04-06,2027-01-29,CAM-E,seudonimizada
+F,CEN-CINAI,Edificio de cuido,San José,Desamparados,9.8970,-84.0640,Unidad ejecutora educativa,Contratista 3,390000000,2026-06-01,2026-12-11,CAM-F,seudonimizada
+G,Salón multiuso,Edificio comunal,Cartago,Paraíso,9.8380,-83.8660,Gobierno local,Contratista 6,210000000,2025-09-01,2026-09-25,CAM-G,seudonimizada
+H,Alcantarillado pluvial,Alcantarillado,Guanacaste,Liberia,10.6350,-85.4370,Gobierno local,Contratista 1,520000000,2026-02-02,2026-11-27,CAM-H,seudonimizada

@@ -1,0 +1,3 @@
+nombre_imagen,clase,probabilidad,recuadro
+20261117-090036.jpg,Persona,tensor(0.9663),"tensor([678.0379, 379.3339, 720.9475, 458.7378])"
+20261117-103005.jpg,Persona,tensor(0.9394),"tensor([155.4757, 617.2983, 202.1002, 709.5996])"

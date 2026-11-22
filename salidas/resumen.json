@@ -1,0 +1,31 @@
+{
+  "fecha_corte": "2026-11-20",
+  "frase": "5 obras ameritan revisión · 1 cámara lleva 9 días sin datos",
+  "obras_que_ameritan_revision": [
+    "A",
+    "C",
+    "H",
+    "D",
+    "E"
+  ],
+  "cola_dispositivos": [
+    "B"
+  ],
+  "pesos": {
+    "inactividad": 30,
+    "atraso": 20,
+    "brecha": 20,
+    "contrato": 15,
+    "ciudadania": 15
+  },
+  "umbrales_alerta": {
+    "inactividad": 0.5,
+    "atraso": 0.5,
+    "brecha": 0.4,
+    "contrato": 0.5,
+    "ciudadania": 0.6
+  },
+  "origen_clima": [
+    "simulado"
+  ]
+}
