@@ -1,0 +1,10 @@
+obra_id,camara_id,fuente_datos,formato,dias_con_archivo,inventario_fotos,desde,hasta
+A,CAM-A,simulado,producción,82,si,2026-08-31,
+B,CAM-B,simulado,producción,73,si,2026-08-31,
+C,CAM-C,simulado,producción,82,si,2026-08-31,
+D,CAM-D,simulado,producción,82,si,2026-08-31,
+E,CAM-E,simulado,producción,82,si,2026-08-31,
+F,CAM-F,simulado,producción,82,si,2026-08-31,
+G,CAM-G,simulado,producción,82,si,2026-08-31,
+H,CAM-H,simulado,producción,82,si,2026-08-31,
+P,dIAra-K1,dIAra real,"etiquetas CSV, etiquetas JSON",8,no,2024-03-19,2024-04-16

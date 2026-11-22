@@ -1,0 +1,5 @@
+obra_id,fecha,tipo,detalle,dias_prorroga,monto_nuevo_crc,suspension_desde,suspension_hasta,documento
+H,2026-09-10,modificacion_monto,Aumento de 15 % por obras adicionales de drenaje,,598000000,,,Adenda u oficio (simulado)
+G,2026-09-25,recepcion_provisional,Recepción provisional de la obra,,,,,Adenda u oficio (simulado)
+D,2026-10-15,prorroga,Prórroga de 91 días aprobada por la administración,91,,,,Adenda u oficio (simulado)
+E,2026-11-13,suspension,Orden de suspensión temporal por lluvias intensas,,,2026-11-16,2026-11-20,Adenda u oficio (simulado)

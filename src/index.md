@@ -3,14 +3,12 @@ title: Qué revisar
 ---
 
 ```js
-import {Plot, grafico, fechaTexto, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, estiloPlot} from "./components/lupia.js";
+import {Plot, grafico, fechaTexto, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
-const fichas = await FileAttachment("data/obras.csv").csv({typed: true});
 const pais = await FileAttachment("data/costa-rica.json").json();
 const resumen = await FileAttachment("data/resumen.json").json();
-const coordenadas = new Map(fichas.map((d) => [d.obra_id, {lat: d.lat, lon: d.lon}]));
-const base = senales.map((d) => ({...d, ...coordenadas.get(d.obra_id)}));
+const base = senales;
 ```
 
 ```js
@@ -37,13 +35,15 @@ const coincide = (o) => !consulta || [o.nombre, o.canton, o.contratista, o.insti
 const visibles = lista.filter(coincide);
 const activo = consulta ? new Set(visibles.map((o) => o.obra_id)) : null;
 const nRevisar = lista.filter((o) => o.estado === "revisar").length;
+const nVigentes = lista.filter((o) => !o.historica).length;
+const nReales = lista.filter(esReal).length;
 ```
 
-<p class="aviso">Datos al ${fechaTexto(resumen.fecha_corte)}. Prototipo académico: las detecciones son simuladas con el formato real de dIAra.</p>
+<p class="aviso">Datos al ${fechaTexto(resumen.fecha_corte)}. Prototipo académico: una obra usa datos reales del piloto de dIAra y las demás son simuladas a partir de ellos. <a href="./datos.html">Ver de dónde sale cada dato</a></p>
 
 <section class="inicio" aria-labelledby="titulo">
   <h1 id="titulo"><span class="marca marca-trazo">${plural(nRevisar, "obra necesita", "obras necesitan")} revisión</span></h1>
-  <p class="bajada">De ${plural(lista.length, "obra", "obras")} con cámara de dIAra. Empiece por la número 1: es la que reúne más señales de riesgo.</p>
+  <p class="bajada">De ${plural(nVigentes, "obra", "obras")} con cámara de dIAra. Empiece por la número 1: es la que reúne más señales de riesgo.</p>
 </section>
 
 ```js
@@ -54,8 +54,8 @@ function itemObra(o) {
     <a href=${`./obra.html?id=${o.obra_id}`}>
       ${iconoEstado(o.estado, o.orden)}
       <span class="cuerpo">
-        <span class="nombre">${o.estado === "revisar" ? html`<span class="marca">${o.nombre}</span>` : o.nombre}</span>
-        <span class="lugar">${o.canton}. ${o.contratista}. ${millones(o.monto_vigente_crc)}.</span>
+        <span class="nombre">${o.estado === "revisar" ? html`<span class="marca">${o.nombre}</span>` : o.nombre}${esReal(o) ? html` <span class="etiqueta-real">Datos reales</span>` : ""}</span>
+        <span class="lugar">${[o.canton, o.contratista, tieneDato(o.monto_vigente_crc) ? millones(o.monto_vigente_crc) : null].filter(Boolean).join(". ")}.</span>
         <span class="porque">${unirFrase(razonesCortas(o))}</span>
       </span>
       ${registrada ? html`<span class="sello">${registrada}</span>` : ""}
@@ -70,6 +70,7 @@ function listaObras() {
     return html`<section class="grupo" aria-labelledby=${`g-${k}`}>
       <h2 id=${`g-${k}`}>${ESTADO_OBRA[k].grupo} <span>${grupo.length}</span></h2>
       ${k === "sin_datos" ? html`<p class="nota-grupo">Primero hay que reparar la cámara; mientras tanto no se puede concluir nada sobre la obra.</p>` : ""}
+      ${k === "historico" ? html`<p class="nota-grupo">La cámara ya no está en estas obras. Se conservan para consulta: muestran cómo se ven en LupIA los datos reales que dIAra publicó.</p>` : ""}
       <ol class="lista">${grupo.map(itemObra)}</ol>
     </section>`;
   })}`;
@@ -77,7 +78,7 @@ function listaObras() {
 function descargarLista() {
   const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const filas = [["Orden", "Obra", "Nombre", "Estado", "Por qué", "Cantón", "Institución ejecutora", "Contratista", "Monto vigente (CRC)", "Puntaje"],
-    ...lista.map((o) => [o.orden, o.obra_id, o.nombre, ESTADO_OBRA[o.estado].label, unirFrase(razonesCortas(o)), o.canton, o.institucion_ejecutora, o.contratista, o.monto_vigente_crc, Math.round(o.puntaje_vivo)])];
+    ...lista.map((o) => [o.orden, o.obra_id, o.nombre, ESTADO_OBRA[o.estado].label, unirFrase(razonesCortas(o)), o.canton, o.institucion_ejecutora, o.contratista, o.monto_vigente_crc ?? "", Math.round(o.puntaje_vivo)])];
   const blob = new Blob(["﻿" + filas.map((f) => f.map(esc).join(",")).join("\n")], {type: "text/csv;charset=utf-8"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -124,7 +125,7 @@ const SENTIDO = {
   ciudadania: "Personas de la comunidad reportaron problemas en el último mes."
 };
 function puntajes() {
-  const datos = lista.filter((o) => o.estado !== "sin_datos");
+  const datos = lista.filter((o) => o.estado !== "sin_datos" && o.estado !== "historico");
   return html`<table class="puntajes">
     <caption class="sr-only">Puntaje de atención de cada obra</caption>
     <thead><tr><th scope="col">Obra</th><th scope="col">Puntaje de 0 a 100</th></tr></thead>
@@ -133,7 +134,7 @@ function puntajes() {
   </table>`;
 }
 function dispersion(width) {
-  const datos = lista.filter((d) => d.fase !== "terminada" && d.estado !== "sin_datos");
+  const datos = lista.filter((d) => d.fase !== "terminada" && d.estado !== "sin_datos" && d.estado !== "historico" && tieneDato(d.monto_vigente_crc));
   const medianaMonto = d3.median(senales, (d) => d.monto_vigente_crc);
   return grafico({
     width, height: 300, marginLeft: 56, marginTop: 20, marginBottom: 44, style: estiloPlot,

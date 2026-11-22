@@ -1,4 +1,20 @@
 obra_id,fecha,categoria,tipo,detalle
+*,2024-01-01,feriado,feriado,Año Nuevo
+*,2024-03-28,feriado,feriado,Jueves Santo
+*,2024-03-29,feriado,feriado,Viernes Santo
+*,2024-04-15,feriado,feriado,Batalla de Rivas (trasladado del 11 de abril)
+*,2024-05-01,feriado,feriado,Día del Trabajador
+*,2024-08-15,feriado,feriado,Día de la Madre
+*,2024-09-15,feriado,feriado,Día de la Independencia
+*,2024-12-25,feriado,feriado,Navidad
+*,2026-01-01,feriado,feriado,Año Nuevo
+*,2026-04-02,feriado,feriado,Jueves Santo
+*,2026-04-03,feriado,feriado,Viernes Santo
+*,2026-04-11,feriado,feriado,Día de Juan Santamaría
+*,2026-05-01,feriado,feriado,Día del Trabajo
+*,2026-07-25,feriado,feriado,Anexión del Partido de Nicoya
+*,2026-08-02,feriado,feriado,Virgen de los Ángeles
+*,2026-08-15,feriado,feriado,Día de la Madre
 *,2026-08-31,feriado,feriado,Día de la Persona Negra y la Cultura Afrocostarricense
 H,2026-09-10,contrato,modificacion_monto,Aumento de 15 % por obras adicionales de drenaje
 *,2026-09-15,feriado,feriado,Independencia de Costa Rica
@@ -12,3 +28,5 @@ H,2026-11-10,ciudadania,obra detenida,La zanja sigue abierta y no hay trabajador
 E,2026-11-13,contrato,suspension,Orden de suspensión temporal por lluvias intensas
 A,2026-11-17,ciudadania,obra detenida,La obra sigue sin trabajadores; solo hay un guarda.
 H,2026-11-18,ciudadania,seguridad,Material acumulado sobre la vía.
+*,2026-12-01,feriado,feriado,Abolición del Ejército
+*,2026-12-25,feriado,feriado,Navidad

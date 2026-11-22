@@ -12,6 +12,8 @@ def avance_previsto(inicio, fin, fecha) -> float:
     Es una aproximación declarada: si se consigue el cronograma real, se reemplaza esta función.
     """
     inicio, fin, fecha = pd.Timestamp(inicio), pd.Timestamp(fin), pd.Timestamp(fecha)
+    if pd.isna(inicio) or pd.isna(fin):
+        return float("nan")
     x = (fecha - inicio).days / max((fin - inicio).days, 1)
     x = min(max(x, 0.0), 1.0)
     return round(100 * (3 * x**2 - 2 * x**3), 1)
@@ -35,7 +37,7 @@ def monto_vigente(obra, eventos: pd.DataFrame, fecha) -> float:
     cambios = _eventos_de(eventos, obra["obra_id"], "modificacion_monto", hasta=fecha)
     if len(cambios):
         return float(cambios["monto_nuevo_crc"].iloc[-1])
-    return float(obra["monto_original_crc"])
+    return float(obra["monto_original_crc"]) if pd.notna(obra["monto_original_crc"]) else float("nan")
 
 
 def fecha_recepcion(obra, eventos: pd.DataFrame):

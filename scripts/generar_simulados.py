@@ -1,21 +1,26 @@
-"""Genera los datos simulados del Radar de Obras.
+"""Genera las cámaras simuladas de LupIA a partir de los datos reales del piloto de dIAra.
 
-Simula lo que dIAra produciría en 8 obras durante 12 semanas. Cada obra sigue un
-escenario pensado para probar una tarea visual del auditor. La semilla es fija:
-en cualquier computadora salen exactamente los mismos archivos.
+Cada foto simulada con actividad es una foto real del piloto (de la misma hora del día) con sus
+mismos objetos y recuadros, a la que se le aplica el comportamiento del modelo en producción: se
+pierde ~15 % de los objetos (sensibilidad de 85,4 %), los recuadros se mueven unos píxeles y cada
+detección recibe una probabilidad sobre el umbral de 0,7. Así, las obras son ficticias, pero lo que
+"ve" cada cámara viene de una obra real.
 
-Salidas en datos/simulados/:
-  dIAra_crudo/CAM-X/AAAAMMDD.csv  detecciones con el formato real de producción de dIAra
-  inventario_capturas.csv          imágenes recibidas por cámara (el "latido" que proponemos)
-  avance_reportado.csv             avance que reporta la unidad ejecutora, cada quincena
-  pagos.csv                        pagos acumulados al cierre de cada mes
-  reportes_ciudadanos.csv          reportes de inspectores ciudadanos
-  clima_simulado.csv               lluvia diaria simulada (respaldo si Open-Meteo no responde)
+Qué obras y cámaras se simulan lo decide el registro (datos/registro/): toda obra con
+fuente_datos = simulado y su escenario. Cada obra tiene su propia semilla, de modo que agregar
+una obra nueva no cambia los datos de las demás.
+
+Salidas en datos/simulados/ (se regeneran en cada corrida; no se guardan en el repositorio):
+  diara/CAM-X/AAAAMMDD.csv  detecciones con el formato de producción de dIAra (run_inference.py)
+  inventario_capturas.csv   fotos recibidas por cámara (el "latido" que LupIA propone a dIAra)
+                            y, para cada foto con actividad, la foto real del piloto de la que sale
+  clima_simulado.csv        lluvia diaria simulada (respaldo si Open-Meteo no responde)
 
 Uso:  python scripts/generar_simulados.py
 """
 import shutil
 import sys
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -23,207 +28,185 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from radar import config as C  # noqa: E402
-from radar.contrato import avance_previsto, dias_suspendidos, fin_vigente, monto_vigente  # noqa: E402
-from radar.lectura import cargar_eventos, cargar_feriados, cargar_obras  # noqa: E402
+from radar import diara, registro  # noqa: E402
+from radar.contrato import dias_suspendidos  # noqa: E402
 
-rng = np.random.default_rng(C.SEMILLA)
 T = pd.Timestamp
+DIAS_ACTIVOS_PILOTO = ["2024-03-19", "2024-03-20", "2024-04-02", "2024-04-03"]  # días completos y con obra
+FOTOS_POR_HORA = 3600 / C.INTERVALO_SEG
 
-# --- Escenarios: cómo trabaja cada cuadrilla durante el período ------------------------
-# p_dia: probabilidad de trabajar un día hábil; p_sabado: de trabajar medio día el sábado;
-# intensidad: proporción de imágenes laborales con gente o máquinas cuando sí trabajan.
-ESCENARIOS = {
-    "A": {"patron": "paralizada", "desde": T("2026-10-19"), "p_dia": 0.95, "p_sabado": 0.5, "intensidad": 0.85},
-    "B": {"patron": "normal", "p_dia": 0.95, "p_sabado": 0.4, "intensidad": 0.75, "falla_camara": T("2026-11-12")},
-    "C": {"patron": "esporadica", "semanas": [T("2026-09-07"), T("2026-10-05"), T("2026-11-02")],
-          "p_dia": 0.9, "intensidad": 0.6},
-    "D": {"patron": "lenta", "dias": [0, 1, 3], "p_dia": 0.9, "intensidad": 0.55},
-    "E": {"patron": "normal", "p_dia": 0.95, "p_sabado": 0.3, "intensidad": 0.7},
-    "F": {"patron": "normal", "p_dia": 0.97, "p_sabado": 0.6, "intensidad": 0.8},
-    "G": {"patron": "terminada", "hasta": T("2026-09-25"), "p_dia": 0.9, "intensidad": 0.5},
-    "H": {"patron": "normal", "p_dia": 0.8, "p_sabado": 0.2, "intensidad": 0.65},
-}
-# Probabilidad de ver cada máquina en una imagen con actividad, según el tipo de obra.
-MAQUINAS = {
-    "Puente": {"Tractor": 0.35, "Vagoneta": 0.30, "Mezcladora": 0.25, "Cargador": 0.10},
-    "Camino": {"Aplanadora": 0.35, "Vagoneta": 0.40, "Cargador": 0.30, "Tractor": 0.20},
-    "Acueducto": {"Tractor": 0.40, "Vagoneta": 0.25},
-    "Alcantarillado": {"Tractor": 0.35, "Vagoneta": 0.30, "Cargador": 0.15},
-}
-MAQUINAS_EDIFICIO = {"Mezcladora": 0.30, "Vagoneta": 0.15}
-# Probabilidad diaria de lluvia por región y mes (setiembre, octubre, noviembre).
-REGION = {"A": "pacifico_sur", "B": "caribe", "C": "norte", "D": "pacifico_norte",
-          "E": "caribe", "F": "central", "G": "central", "H": "pacifico_norte"}
-P_LLUVIA = {"pacifico_sur": {9: .70, 10: .75, 11: .55}, "caribe": {8: .45, 9: .45, 10: .50, 11: .65},
-            "norte": {9: .60, 10: .60, 11: .55}, "pacifico_norte": {9: .60, 10: .65, 11: .30},
-            "central": {9: .60, 10: .65, 11: .35}}
-FECHAS_INFORME = [T(f) for f in ["2026-08-31", "2026-09-15", "2026-09-30", "2026-10-15", "2026-10-31", "2026-11-15"]]
-CIERRES_MES = [T("2026-08-31"), T("2026-09-30"), T("2026-10-31")]
+# Cuánto trabaja la cuadrilla en cada escenario
+P_DIA = {"normal": 0.93, "paralizada": 0.93, "esporadica": 0.9, "lenta": 0.9, "falla_camara": 0.93, "terminada": 0.9}
+INTENSIDAD = {"lenta": 0.75, "esporadica": 0.8}  # proporción de la actividad típica del piloto
+# Qué fotos del piloto se parecen más a cada tipo de obra (peso extra a las que tienen esa máquina)
+AFINIDAD = {"Camino": "Aplanadora", "Puente": "Tractor", "Acueducto": "Tractor", "Alcantarillado": "Tractor",
+            "Edificio educativo": "Mezcladora"}
+# Probabilidad diaria de lluvia por región y mes
+REGION_PROVINCIA = {"Limón": "caribe", "Guanacaste": "pacifico_norte", "Puntarenas": "pacifico_sur",
+                    "Alajuela": "norte", "San José": "central", "Cartago": "central", "Heredia": "central"}
+REGION_CANTON = {"Pérez Zeledón": "pacifico_sur", "Upala": "norte"}
+P_LLUVIA = {"caribe": [.55, .45, .40, .45, .60, .60, .65, .60, .45, .50, .65, .70],
+            "pacifico_norte": [.05, .05, .05, .15, .55, .60, .45, .55, .65, .70, .30, .10],
+            "pacifico_sur": [.25, .20, .30, .50, .75, .70, .65, .70, .75, .80, .55, .35],
+            "norte": [.45, .35, .30, .40, .60, .65, .65, .65, .60, .60, .55, .55],
+            "central": [.10, .05, .10, .30, .60, .55, .45, .55, .65, .70, .40, .15]}
 
 
-def jornada(dia, esc, feriado: bool, suspendido: bool) -> float:
-    """Fracción de jornada trabajada ese día: 1 = día completo, 0.5 = medio día, 0 = no se trabajó."""
-    dow = dia.weekday()
+def semilla(obra_id: str) -> np.random.Generator:
+    return np.random.default_rng([C.SEMILLA, zlib.crc32(obra_id.encode())])
+
+
+# --- Lo que se aprende del piloto real --------------------------------------------------------
+class Piloto:
+    """Fotos reales del piloto agrupadas por hora, listas para recombinarse."""
+
+    def __init__(self):
+        det = diara.leer_camara(C.DIARA_REAL / "dIAra-K1", "dIAra-K1").detecciones
+        det = det.sort_values(["nombre_imagen", "clase"]).reset_index(drop=True)
+        self.objetos = det[["nombre_imagen", "clase", "x1", "y1", "x2", "y2"]]
+        fotos = det.groupby("nombre_imagen").agg(hora=("fecha_hora", lambda s: s.iloc[0].hour),
+                                                 inicio=("clase", lambda s: s.index[0]),
+                                                 n=("clase", "size"),
+                                                 clases=("clase", lambda s: set(s)))
+        self.fotos = fotos.reset_index()
+        # Actividad típica por hora: proporción de fotos con algún objeto en los días completos de obra
+        completos = det[det["fecha_hora"].dt.strftime("%Y-%m-%d").isin(DIAS_ACTIVOS_PILOTO)]
+        por_hora = completos.groupby(completos["fecha_hora"].dt.hour)["nombre_imagen"].nunique()
+        self.actividad_hora = (por_hora / (FOTOS_POR_HORA * len(DIAS_ACTIVOS_PILOTO))).clip(upper=0.97)
+        self.solo_personas = self.fotos.index[self.fotos["clases"].map(lambda c: c == {"Persona"})].to_numpy()
+
+        # Arreglos de numpy para recombinar rápido
+        self.nombre = self.fotos["nombre_imagen"].to_numpy()
+        self.inicio = self.fotos["inicio"].to_numpy()
+        self.n = self.fotos["n"].to_numpy()
+        self.hora = self.fotos["hora"].to_numpy()
+        self.o_clase = self.objetos["clase"].to_numpy()
+        self.o_caja = self.objetos[["x1", "y1", "x2", "y2"]].to_numpy(dtype=float)
+
+    def candidatas(self, tipo: str) -> dict:
+        """Para cada hora: fotos reales de esa hora (o de la más cercana) y su probabilidad de salir."""
+        clave = AFINIDAD.get(tipo)
+        w = np.ones(len(self.fotos))
+        if clave:
+            w[self.fotos["clases"].map(lambda c: clave in c).to_numpy()] = 2.0
+        out = {}
+        for hora in range(24):
+            for delta in range(0, 24):
+                cand = np.flatnonzero((self.hora == hora - delta) | (self.hora == hora + delta))
+                if len(cand):
+                    out[hora] = (cand, w[cand] / w[cand].sum())
+                    break
+        return out
+
+
+# --- Escenarios ---------------------------------------------------------------------------------
+def jornada(rng, dia, obra, feriado: bool, suspendido: bool) -> float:
+    """Fracción de jornada trabajada ese día: 1 = día completo, 0,5 = medio día, 0 = no se trabajó."""
+    esc, desde, dow = obra["escenario_simulado"], obra["escenario_desde"], dia.weekday()
     if suspendido or dow == 6:
         return 0.0
-    patron = esc["patron"]
-    if patron == "paralizada" and dia >= esc["desde"]:
+    if esc in ("paralizada", "terminada") and pd.notna(desde) and dia >= desde:
         return 0.0
-    if patron == "terminada" and dia > esc["hasta"]:
-        return 0.0
-    if patron == "esporadica" and ((dia - pd.Timedelta(days=dow)) not in esc["semanas"] or dow > 2):
-        return 0.0
-    if patron == "lenta" and dow not in esc["dias"]:
+    if esc == "esporadica":
+        semana = (dia - T(C.INICIO_MONITOREO)).days // 7
+        if semana % 4 != zlib.crc32(obra["obra_id"].encode()) % 4 or dow > 2:
+            return 0.0
+    if esc == "lenta" and dow not in (0, 1, 3):
         return 0.0
     if feriado:
         return 1.0 if rng.random() < 0.15 else 0.0
     if dow == 5:
-        return 0.5 if rng.random() < esc.get("p_sabado", 0) else 0.0
-    return 1.0 if rng.random() < esc["p_dia"] else 0.0
+        return 0.5 if rng.random() < 0.4 else 0.0
+    return 1.0 if rng.random() < P_DIA[esc] else 0.0
 
 
-def recuadro(clase: str) -> str:
-    """Caja de detección en el formato de producción: tensor([x1, y1, x2, y2])."""
-    if clase == "Persona":
-        w, h = rng.uniform(25, 60), rng.uniform(60, 130)
-    else:
-        w, h = rng.uniform(120, 380), rng.uniform(90, 260)
-    x1 = rng.uniform(0, C.ANCHO_IMAGEN - w)
-    y1 = rng.uniform(300, C.ALTO_IMAGEN - h)
-    return f"tensor([{x1:.4f}, {y1:.4f}, {x1 + w:.4f}, {y1 + h:.4f}])"
+def probabilidades(rng, n: int) -> np.ndarray:
+    return C.UMBRAL_MODELO + 0.0001 + (0.9999 - C.UMBRAL_MODELO) * rng.beta(6, 1.6, n)
 
 
-def probabilidad() -> str:
-    """Probabilidad sobre el umbral del modelo, en el formato de producción: tensor(0.9876)."""
-    return f"tensor({C.UMBRAL_MODELO + 0.0001 + (0.9999 - C.UMBRAL_MODELO) * rng.beta(6, 1.6):.4f})"
+def simular_camara(piloto: Piloto, obra, cam, feriados: set, suspendidos: set, inventario: list):
+    rng = semilla(obra["obra_id"])
+    candidatas = piloto.candidatas(obra["tipo"])
+    intensidad = INTENSIDAD.get(obra["escenario_simulado"], 1.0)
+    carpeta = C.DIARA_SIMULADO / cam["camara_id"]
+    carpeta.mkdir(parents=True, exist_ok=True)
+    fin = min(cam["hasta"], T(C.FECHA_CORTE)) if pd.notna(cam["hasta"]) else T(C.FECHA_CORTE)
+    segundos = np.arange(C.HORA_PRIMERA_CAPTURA * 3600, (C.HORA_ULTIMA_CAPTURA + 1) * 3600, C.INTERVALO_SEG)
+    vacio = np.empty(0, dtype=int)
+    for dia in pd.date_range(cam["desde"], fin, freq="D"):
+        if (obra["escenario_simulado"] == "falla_camara" and pd.notna(obra["escenario_desde"])
+                and dia >= obra["escenario_desde"]):
+            continue  # la cámara no envía nada: en producción no se genera el CSV del día
+        jorn = jornada(rng, dia, obra, dia in feriados, dia in suspendidos)
+        p_recibir = rng.uniform(0.2, 0.45) if rng.random() < 0.02 else 0.965  # baja energía o señal
+        filas = []
+        for s in segundos:
+            if rng.random() > p_recibir:
+                continue
+            s_real = int(s + rng.integers(0, 4))
+            hora = s_real // 3600
+            nombre = f"{dia:%Y%m%d}-{hora:02d}{(s_real % 3600) // 60:02d}{s_real % 60:02d}.jpg"
+            fin_laboral = 11 if jorn == 0.5 else C.HORARIO_LABORAL[1]
+            laboral = jorn > 0 and C.HORARIO_LABORAL[0] <= hora <= fin_laboral
+            origen, quedan = "", vacio
+            if laboral and rng.random() < intensidad * piloto.actividad_hora.get(hora, 0.0):
+                cand, p = candidatas[hora]
+                f = int(rng.choice(cand, p=p))
+                origen = piloto.nombre[f]
+                idx = np.arange(piloto.inicio[f], piloto.inicio[f] + piloto.n[f])
+                quedan = idx[rng.random(len(idx)) < C.SENSIBILIDAD_MODELO]  # el modelo no ve ~15 %
+            elif not laboral and rng.random() < (0.15 if jorn > 0 and hora in (5, 17) else 0.02):
+                f = int(rng.choice(piloto.solo_personas))  # el guarda, o alguien que llega temprano
+                origen = piloto.nombre[f]
+                quedan = np.arange(piloto.inicio[f], piloto.inicio[f] + 1)
+            inventario.append([cam["camara_id"], nombre, origen])
+            if len(quedan):
+                caja = piloto.o_caja[quedan] + np.tile(rng.integers(-4, 5, size=(len(quedan), 2)), (1, 2))
+                caja[:, [0, 2]] = np.clip(caja[:, [0, 2]], 0, C.ANCHO_IMAGEN)
+                caja[:, [1, 3]] = np.clip(caja[:, [1, 3]], 0, C.ALTO_IMAGEN)
+                for clase, p_det, (a, b, c, d) in zip(piloto.o_clase[quedan], probabilidades(rng, len(quedan)), caja):
+                    filas.append([nombre, clase, f"tensor({p_det:.4f})", f"tensor([{a:.4f}, {b:.4f}, {c:.4f}, {d:.4f}])"])
+        pd.DataFrame(filas, columns=["nombre_imagen", "clase", "probabilidad", "recuadro"]).to_csv(
+            carpeta / f"{dia:%Y%m%d}.csv", index=False)
 
 
-def detecciones_de_imagen(nombre: str, hora: int, jorn: float, esc, tipo: str) -> list:
+def simular_clima(obras, camaras, eventos):
     filas = []
-    fin_laboral = 11 if jorn == 0.5 else C.HORARIO_LABORAL[1]
-    laboral = C.HORARIO_LABORAL[0] <= hora <= fin_laboral
-    if jorn > 0 and laboral:
-        borde = hora in (C.HORARIO_LABORAL[0], fin_laboral)
-        if rng.random() < esc["intensidad"] * (0.6 if borde else 1.0):
-            for _ in range(1 + rng.poisson(1.4)):
-                filas.append([nombre, "Persona", probabilidad(), recuadro("Persona")])
-            for clase, p in MAQUINAS.get(tipo, MAQUINAS_EDIFICIO).items():
-                if rng.random() < p:
-                    filas.append([nombre, clase, probabilidad(), recuadro(clase)])
-    else:
-        # Fuera de jornada solo aparece, a veces, el guarda o alguien que llega temprano.
-        p_persona = 0.15 if (jorn > 0 and hora in (5, 17)) else 0.03
-        if rng.random() < p_persona:
-            filas.append([nombre, "Persona", probabilidad(), recuadro("Persona")])
-    return filas
-
-
-def simular_camaras(obras, eventos, feriados_set):
-    dias = pd.date_range(C.INICIO_MONITOREO, C.FECHA_CORTE, freq="D")
-    slots = [(h, m) for h in range(C.HORA_PRIMERA_CAPTURA, C.HORA_ULTIMA_CAPTURA + 1)
-             for m in range(0, 60, C.INTERVALO_MIN)]
-    inventario = []
     for oid, obra in obras.iterrows():
-        esc = ESCENARIOS[oid]
+        rng = np.random.default_rng([C.SEMILLA, zlib.crc32(oid.encode()), 7])
+        region = REGION_CANTON.get(obra["canton"], REGION_PROVINCIA.get(obra["provincia"], "central"))
         suspendidos = dias_suspendidos(oid, eventos)
-        carpeta = C.CRUDO_DIARA / obra["camara_id"]
-        carpeta.mkdir(parents=True, exist_ok=True)
-        for dia in dias:
-            jorn = jornada(dia, esc, dia in feriados_set, dia in suspendidos)
-            if "falla_camara" in esc and dia >= esc["falla_camara"]:
-                continue  # la cámara no envía nada: en producción no se genera el CSV del día
-            p_recibir = rng.uniform(0.2, 0.45) if rng.random() < 0.02 else 0.965  # baja energía o señal
-            filas = []
-            for hora, minuto in slots:
-                if rng.random() > p_recibir:
-                    continue
-                nombre = f"{dia:%Y%m%d}-{hora:02d}{minuto:02d}{rng.integers(0, 60):02d}.jpg"
-                inventario.append([obra["camara_id"], nombre])
-                filas += detecciones_de_imagen(nombre, hora, jorn, esc, obra["tipo"])
-            pd.DataFrame(filas, columns=["nombre_imagen", "clase", "probabilidad", "recuadro"]).to_csv(
-                carpeta / f"{dia:%Y%m%d}.csv", index=False)
-    pd.DataFrame(inventario, columns=["camara_id", "nombre_imagen"]).to_csv(
-        C.SIMULADOS / "inventario_capturas.csv", index=False)
-
-
-def reportado(obra, eventos, fecha) -> float:
-    """Avance que reportaría la unidad ejecutora en cada escenario."""
-    oid = obra["obra_id"]
-    prev = avance_previsto(obra["fecha_inicio"], fin_vigente(obra, eventos, fecha), fecha)
-    if oid == "A":  # deja de avanzar cuando se paraliza, y lo reporta con honestidad
-        congelado = avance_previsto(obra["fecha_inicio"], obra["fecha_fin_original"], T("2026-10-15"))
-        valor = min(prev, congelado) - 1 + (0.5 if fecha >= T("2026-10-31") else 0)
-    elif oid == "C":  # reporta como si fuera al día, aunque casi no se observa actividad
-        valor = prev - 1
-    elif oid == "D":  # atrasada frente al plan original
-        valor = 0.8 * avance_previsto(obra["fecha_inicio"], obra["fecha_fin_original"], fecha)
-    elif oid == "G":
-        valor = min(100, prev + 2)
-    elif oid == "H":  # se va quedando atrás
-        inicio = T(C.INICIO_MONITOREO)
-        avance_ventana = (fecha - inicio).days / (T("2026-11-15") - inicio).days
-        valor = prev - 4 - 6 * max(avance_ventana, 0)
-    elif oid == "B":
-        valor = prev - 2
-    else:
-        valor = prev - 1
-    return round(min(max(valor, 0), 100), 1)
-
-
-def simular_contrato(obras, eventos):
-    avance, pagos = [], []
-    for oid, obra in obras.iterrows():
-        for fecha in FECHAS_INFORME:
-            avance.append([oid, fecha.date(), reportado(obra, eventos, fecha), "simulado"])
-        for fecha in CIERRES_MES:
-            monto = monto_vigente(obra, eventos, fecha)
-            pagado = round(reportado(obra, eventos, fecha) / 100 * monto * 0.95, -5)  # 5 % de retención
-            pagos.append([oid, fecha.date(), int(pagado), "simulado"])
-    pd.DataFrame(avance, columns=["obra_id", "fecha", "avance_reportado_pct", "origen"]).to_csv(
-        C.SIMULADOS / "avance_reportado.csv", index=False)
-    pd.DataFrame(pagos, columns=["obra_id", "fecha", "pagado_acumulado_crc", "origen"]).to_csv(
-        C.SIMULADOS / "pagos.csv", index=False)
-
-
-def simular_reportes():
-    reportes = [
-        ["2026-10-22", "H", "seguridad", "Zanja abierta sin señalización frente a la escuela.", True],
-        ["2026-10-28", "C", "obra detenida", "Pasan días sin maquinaria en el camino.", False],
-        ["2026-11-03", "H", "calidad", "El agua se empoza donde ya trabajaron.", True],
-        ["2026-11-06", "A", "obra detenida", "Desde hace semanas no se ve maquinaria en el puente.", True],
-        ["2026-11-10", "H", "obra detenida", "La zanja sigue abierta y no hay trabajadores desde el lunes.", True],
-        ["2026-11-17", "A", "obra detenida", "La obra sigue sin trabajadores; solo hay un guarda.", False],
-        ["2026-11-18", "H", "seguridad", "Material acumulado sobre la vía.", True],
-    ]
-    df = pd.DataFrame(reportes, columns=["fecha", "obra_id", "tipo", "descripcion", "con_foto"])
-    df["origen"] = "simulado"
-    df.to_csv(C.SIMULADOS / "reportes_ciudadanos.csv", index=False)
-
-
-def simular_clima(obras):
-    filas = []
-    for oid in obras.index:
-        for dia in pd.date_range(C.INICIO_MONITOREO, C.FECHA_CORTE, freq="D"):
-            p = P_LLUVIA[REGION[oid]].get(dia.month, 0.5)
-            mm = rng.gamma(0.8, 14) if rng.random() < p else 0.0
-            if oid == "E" and T("2026-11-16") <= dia <= T("2026-11-20"):
-                mm = rng.uniform(35, 80)  # coherente con la suspensión por lluvias de la obra E
-            filas.append([oid, dia.date(), round(mm, 1), "simulado"])
+        for _, cam in camaras[camaras["obra_id"] == oid].iterrows():
+            fin = cam["hasta"] if pd.notna(cam["hasta"]) else T(C.FECHA_CORTE)
+            for dia in pd.date_range(cam["desde"], fin, freq="D"):
+                mm = rng.gamma(0.8, 14) if rng.random() < P_LLUVIA[region][dia.month - 1] else 0.0
+                if dia in suspendidos:
+                    mm = rng.uniform(35, 80)  # las suspensiones simuladas son por lluvias
+                filas.append([oid, dia.date(), round(mm, 1), "simulado"])
     pd.DataFrame(filas, columns=["obra_id", "fecha", "lluvia_mm", "origen"]).to_csv(
         C.SIMULADOS / "clima_simulado.csv", index=False)
 
 
 def main():
     if C.SIMULADOS.exists():
-        shutil.rmtree(C.SIMULADOS)  # se regenera todo desde cero
+        shutil.rmtree(C.SIMULADOS)
     C.SIMULADOS.mkdir(parents=True)
-    obras, eventos = cargar_obras(), cargar_eventos()
-    feriados_set = set(cargar_feriados()["fecha"])
-    simular_camaras(obras, eventos, feriados_set)
-    simular_contrato(obras, eventos)
-    simular_reportes()
-    simular_clima(obras)
-    print(f"Datos simulados listos en {C.SIMULADOS.relative_to(C.RAIZ)} (semilla {C.SEMILLA}).")
+    reg = registro.cargar()
+    if reg.errores:
+        sys.exit("El registro tiene errores; corra scripts/registro.py para verlos.")
+    obras, camaras, eventos = reg["obras"], reg["camaras"], reg["eventos_contrato"]
+    feriados = set(reg["feriados"]["fecha"])
+    piloto = Piloto()
+    inventario = []
+    simuladas = obras[obras["fuente_datos"] == "simulado"]
+    for _, cam in camaras[camaras["obra_id"].isin(simuladas.index)].iterrows():
+        obra = simuladas.loc[cam["obra_id"]]
+        simular_camara(piloto, obra, cam, feriados, dias_suspendidos(obra["obra_id"], eventos), inventario)
+    pd.DataFrame(inventario, columns=["camara_id", "nombre_imagen", "imagen_piloto"]).to_csv(
+        C.SIMULADOS / "inventario_capturas.csv", index=False)
+    simular_clima(obras, camaras, eventos)
+    print(f"{len(simuladas)} obras simuladas a partir de {len(piloto.fotos)} fotos reales del piloto "
+          f"({len(inventario):,} fotos generadas, semilla {C.SEMILLA}).")
 
 
 if __name__ == "__main__":

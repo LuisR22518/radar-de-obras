@@ -1,0 +1,2 @@
+tabla,fila,nivel,mensaje
+Obras,10,aviso,"Obra P: sin monto_original_crc, fecha_inicio, fecha_fin_original, contratista. Las señales que dependen del contrato no se calculan."

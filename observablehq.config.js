@@ -4,6 +4,7 @@ const lupa = `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"
 
 const paginas = [
   {nombre: "Qué revisar", href: "./index.html", rutas: ["/", "/obra", "/index"]},
+  {nombre: "Datos", href: "./datos.html", rutas: ["/datos"]},
   {nombre: "Cómo funciona", href: "./metodologia.html", rutas: ["/metodologia"]}
 ];
 
@@ -11,7 +12,7 @@ export default {
   title: "LupIA",
   root: "src",
   lang: "es",
-  pages: [{name: "Qué revisar", path: "/index"}, {name: "Análisis de obra", path: "/obra"}, {name: "Cómo funciona", path: "/metodologia"}],
+  pages: [{name: "Qué revisar", path: "/index"}, {name: "Análisis de obra", path: "/obra"}, {name: "Datos", path: "/datos"}, {name: "Cómo funciona", path: "/metodologia"}],
   sidebar: false,
   toc: false,
   pager: false,
@@ -28,7 +29,7 @@ export default {
       .join("")}</nav>`,
   footer:
     "LupIA es un prototipo académico de LEAD University (Visualización de datos, 2026) y no es una herramienta oficial de la Contraloría General de la República. " +
-    "Las detecciones son simuladas con el formato real de dIAra y las obras están seudonimizadas. Lluvia: Open-Meteo (CC BY 4.0). Tipografía: Public Sans (OFL).",
+    "Usa datos reales del piloto de dIAra (CGR, CENFOTEC y GIZ) y obras simuladas a partir de ellos, con nombres seudonimizados. Lluvia: Open-Meteo (CC BY 4.0). Tipografía: Public Sans (OFL).",
   // En Windows el intérprete se llama "python"; en Mac, Linux y GitHub Actions, "python3".
   interpreters: {".py": [process.platform === "win32" ? "python" : "python3"]}
 };

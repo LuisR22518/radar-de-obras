@@ -1,8 +1,0 @@
-fecha,obra_id,tipo,descripcion,con_foto,origen
-2026-10-22,H,seguridad,Zanja abierta sin señalización frente a la escuela.,True,simulado
-2026-10-28,C,obra detenida,Pasan días sin maquinaria en el camino.,False,simulado
-2026-11-03,H,calidad,El agua se empoza donde ya trabajaron.,True,simulado
-2026-11-06,A,obra detenida,Desde hace semanas no se ve maquinaria en el puente.,True,simulado
-2026-11-10,H,obra detenida,La zanja sigue abierta y no hay trabajadores desde el lunes.,True,simulado
-2026-11-17,A,obra detenida,La obra sigue sin trabajadores; solo hay un guarda.,False,simulado
-2026-11-18,H,seguridad,Material acumulado sobre la vía.,True,simulado

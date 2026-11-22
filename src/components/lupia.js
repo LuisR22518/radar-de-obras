@@ -51,10 +51,13 @@ export const SENALES = [
 export const nombreSenal = Object.fromEntries(SENALES.map((s) => [s.key, s.label]));
 
 // Puntaje de 0 a 100 con los pesos que elija el auditor.
+// Puntaje de 0 a 100 con las señales que tienen dato (si falta un dato, su peso se reparte entre las demás)
 export function puntaje(obra, pesos) {
-  const total = SENALES.reduce((a, s) => a + pesos[s.key], 0) || 1;
-  return (100 * SENALES.reduce((a, s) => a + pesos[s.key] * obra[`senal_${s.key}`], 0)) / total;
+  const con = SENALES.filter((s) => obra[`senal_${s.key}`] != null && !Number.isNaN(obra[`senal_${s.key}`]));
+  const total = con.reduce((a, s) => a + pesos[s.key], 0);
+  return total ? (100 * con.reduce((a, s) => a + pesos[s.key] * obra[`senal_${s.key}`], 0)) / total : 0;
 }
+export const tieneDato = (v) => v != null && v !== "" && !Number.isNaN(v);
 
 export const alertasDe = (o) => (o.alertas ? String(o.alertas).split(";") : []);
 
@@ -131,21 +134,24 @@ export const estiloPlot = {fontFamily: "Public Sans, system-ui, sans-serif", fon
 export const ESTADO_OBRA = {
   revisar: {label: "Necesita revisión", grupo: "Necesitan revisión"},
   sin_alertas: {label: "Sin alertas", grupo: "Sin alertas"},
-  sin_datos: {label: "Cámara sin datos", grupo: "Cámara sin datos"}
+  sin_datos: {label: "Cámara sin datos", grupo: "Cámara sin datos"},
+  historico: {label: "Monitoreo terminado", grupo: "Monitoreo terminado"}
 };
-export const estadoObra = (o) => (o.en_cola_dispositivos ? "sin_datos" : o.amerita_revision ? "revisar" : "sin_alertas");
+export const estadoObra = (o) => (o.historica ? "historico" : o.en_cola_dispositivos ? "sin_datos" : o.amerita_revision ? "revisar" : "sin_alertas");
+export const esReal = (o) => o.fuente_datos === "dIAra real";
 
 // Orden de trabajo: primero lo que necesita revisión (por puntaje), luego sin alertas y al final las cámaras sin datos.
 export function ordenar(obras, pesos) {
-  const rango = {revisar: 0, sin_alertas: 1, sin_datos: 2};
+  const rango = {revisar: 0, sin_alertas: 1, sin_datos: 2, historico: 3};
   return obras
-    .map((o) => ({...o, estado: estadoObra(o), puntaje_vivo: o.en_cola_dispositivos ? 0 : puntaje(o, pesos)}))
+    .map((o) => ({...o, estado: estadoObra(o), puntaje_vivo: o.en_cola_dispositivos || o.historica ? 0 : puntaje(o, pesos)}))
     .sort((a, b) => rango[a.estado] - rango[b.estado] || b.puntaje_vivo - a.puntaje_vivo)
     .map((o, i) => ({...o, orden: i + 1}));
 }
 
 // Razones cortas, para leer de un vistazo en la lista.
 export function razonesCortas(o) {
+  if (o.historica) return [esReal(o) ? `datos reales del piloto de dIAra: ${plural(o.dias_con_datos, "día publicado", "días publicados")} entre ${fecha(o.periodo_desde)} y ${fecha(o.fecha_corte_obra)} de ${aFecha(o.fecha_corte_obra).getUTCFullYear()}` : "la cámara ya se retiró de esta obra"];
   if (o.en_cola_dispositivos) return [`No llegan fotos desde hace ${plural(o.dias_sin_datos, "día", "días")}: va a mantenimiento`];
   if (!o.amerita_revision) return [o.fase === "terminada" ? "Obra terminada y recibida" : "Actividad normal y al día"];
   const corto = {
@@ -171,10 +177,10 @@ export function leerDecision(id) {
 // Ícono de estado (no depende solo del color): círculo resaltado, círculo vacío o rayado
 export function iconoEstado(estado, numero, tam = 26) {
   const r = tam / 2 - 1.5;
-  const relleno = {revisar: "var(--resaltador)", sin_alertas: "var(--papel)", sin_datos: "url(#lupia-rayado)"}[estado];
+  const relleno = {revisar: "var(--resaltador)", sin_alertas: "var(--papel)", sin_datos: "url(#lupia-rayado)", historico: "var(--papel)"}[estado];
   const borde = estado === "revisar" ? "var(--tinta)" : "var(--trazo)";
   return svg`<svg class="icono-estado" width=${tam} height=${tam} viewBox="0 0 ${tam} ${tam}" aria-hidden="true">
-    <circle cx=${tam / 2} cy=${tam / 2} r=${r} fill=${relleno} stroke=${borde} stroke-width=${estado === "revisar" ? 1.75 : 1.25} />
+    <circle cx=${tam / 2} cy=${tam / 2} r=${r} fill=${relleno} stroke=${borde} stroke-width=${estado === "revisar" ? 1.75 : 1.25} stroke-dasharray=${estado === "historico" ? "2.5 2" : "none"} />
     ${numero == null ? "" : svg`<text x=${tam / 2} y=${tam / 2} dy="0.36em" text-anchor="middle" font-size=${tam * 0.46} font-weight="700"
       fill=${estado === "revisar" ? "var(--tinta)" : "var(--grafito)"} paint-order="stroke" stroke=${estado === "sin_datos" ? "var(--papel)" : "none"} stroke-width="3">${numero}</text>`}
   </svg>`;

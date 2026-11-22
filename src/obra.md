@@ -3,7 +3,7 @@ title: Análisis de obra
 ---
 
 ```js
-import {Plot, grafico, fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot} from "./components/lupia.js";
+import {Plot, grafico, fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const fichas = await FileAttachment("data/obras.csv").csv({typed: true});
@@ -17,9 +17,15 @@ const lista = ordenar(senales, resumen.pesos);
 const porId = new Map(lista.map((d) => [d.obra_id, d]));
 const fichaPorId = new Map(fichas.map((d) => [d.obra_id, d]));
 const DIA = 864e5;
-const corte = new Date(`${resumen.fecha_corte}T00:00:00Z`);
-const inicioMonitoreo = d3.min(diario, (d) => d.fecha);
-const finVentana = new Date(+corte + DIA);
+// Fotos reales del piloto (con las personas difuminadas): se declaran una por una para que se publiquen
+const FOTOS = {
+  "20240319-085758.jpg": FileAttachment("data/fotos-piloto/20240319-085758.jpg"),
+  "20240319-085919.jpg": FileAttachment("data/fotos-piloto/20240319-085919.jpg"),
+  "20240319-090039.jpg": FileAttachment("data/fotos-piloto/20240319-090039.jpg"),
+  "20240319-090159.jpg": FileAttachment("data/fotos-piloto/20240319-090159.jpg"),
+  "20240319-090319.jpg": FileAttachment("data/fotos-piloto/20240319-090319.jpg"),
+  "20240319-090439.jpg": FileAttachment("data/fotos-piloto/20240319-090439.jpg")
+};
 ```
 
 ```js
@@ -37,6 +43,11 @@ const o = porId.get(obraId);
 const ficha = fichaPorId.get(obraId);
 const siguiente = lista[o.orden % lista.length];
 const dias = diario.filter((d) => d.obra_id === obraId);
+// Cada obra se mira en su propio período con cámara (la del piloto es de 2024)
+const corte = o.fecha_corte_obra;
+const inicioMonitoreo = d3.min(dias, (d) => d.fecha);
+const finVentana = new Date(+corte + DIA);
+const real = esReal(o);
 const ultimas4 = dias.filter((d) => d.fecha > new Date(+corte - 28 * DIA));
 const habiles4 = ultimas4.filter((d) => d.es_habil && d.estado !== "sin_datos");
 const ultimoActivo = d3.max(dias.filter((d) => d.estado === "actividad"), (d) => d.fecha);
@@ -50,19 +61,27 @@ for (const d of [...dias].sort((a, b) => b.fecha - a.fecha)) {
 }
 const nSinDatos = dias.filter((d) => d.estado === "sin_datos").length;
 const porQue = o.estado === "revisar" ? razones(o)
+  : o.estado === "historico" ? [
+      {texto: `La cámara estuvo en la obra del ${fechaLarga(o.periodo_desde)} al ${fechaLarga(o.fecha_corte_obra)}; ya no envía datos.`},
+      ...(real ? [{texto: `dIAra publicó ${plural(o.dias_con_datos, "día", "días")} de ese período, con objetos etiquetados por personas.`}] : [])]
   : [{texto: o.estado === "sin_datos"
       ? `No llegan fotos desde el ${fechaLarga(o.ultima_captura)} (${plural(o.dias_sin_datos, "día", "días")}). Primero hay que reparar la cámara.`
       : o.fase === "terminada" ? "La obra ya fue recibida: no genera alertas." : "Ninguna de las cinco señales pasa su límite."}];
+const conAvance = tieneDato(o.avance_reportado_pct) && tieneDato(o.avance_previsto_pct);
 const queSabemos = [
-  o.estado === "sin_datos" ? `Antes de la falla, la cámara mostraba actividad normal.` : `En las últimas 4 semanas hubo actividad en ${habiles4.filter((d) => d.estado === "actividad").length} de ${habiles4.length} días hábiles con datos.`,
+  o.estado === "sin_datos" ? `Antes de la falla, la cámara mostraba actividad normal.`
+    : `En las últimas 4 semanas con cámara hubo actividad en ${habiles4.filter((d) => d.estado === "actividad").length} de ${habiles4.length} días hábiles con datos.`,
   ultimoActivo ? `El último día con actividad fue el ${fechaLarga(ultimoActivo)}.` : "No se observó actividad en el período.",
-  `La ejecutora reporta ${num(o.avance_reportado_pct)}\u00a0% de avance; el cronograma prevé ${num(o.avance_previsto_pct)}\u00a0%.`
+  conAvance ? `La ejecutora reporta ${num(o.avance_reportado_pct)}\u00a0% de avance; el cronograma prevé ${num(o.avance_previsto_pct)}\u00a0%.`
+    : "No hay contrato ni informes de avance registrados para esta obra."
 ];
 const noSePuede = [
   "Cuánto avanzó la obra: la cámara ve personas y máquinas, no avance físico.",
-  nSinDatos ? `Qué pasó fuera del ángulo de la cámara, ni en ${nSinDatos === 1 ? "el día" : `los ${nSinDatos} días`} sin datos.` : "Qué pasa fuera del ángulo de la cámara.",
+  real ? `Qué pasó en los ${nSinDatos} días sin archivo: los datos públicos no dicen si no hubo trabajo o si la cámara estaba apagada.`
+    : nSinDatos ? `Qué pasó fuera del ángulo de la cámara, ni en ${nSinDatos === 1 ? "el día" : `los ${nSinDatos} días`} sin datos.` : "Qué pasa fuera del ángulo de la cámara.",
   "Si hay una irregularidad: LupIA solo indica dónde conviene revisar."
 ];
+const sinDato = () => html`<span class="tenue">Sin dato</span>`;
 ```
 
 <div class="ficha-barra no-imprimir">
@@ -74,17 +93,20 @@ const noSePuede = [
   <div>
     <p class="estado">${iconoEstado(o.estado, o.orden, 24)}${o.estado === "revisar" ? html`<span class="marca">${ESTADO_OBRA[o.estado].label}</span>` : ESTADO_OBRA[o.estado].label}<span class="posicion">Número ${o.orden} de ${lista.length} en la lista</span></p>
     <h1 id="nombre-obra">${o.nombre}</h1>
-    <p class="lugar">${o.tipo} en ${o.canton}, ${ficha.provincia}. Obra ${o.obra_id}.</p>
+    <p class="lugar">${o.tipo} en ${o.canton}, ${o.provincia}. Obra ${o.obra_id}.</p>
+    <p class="procedencia">${real
+      ? html`<span class="etiqueta-real">Datos reales</span> Detecciones del piloto de dIAra, etiquetadas por personas. El contrato de esta obra no es público.`
+      : html`<span class="etiqueta-simulada">Simulada</span> Lo que ve su cámara se arma con fotos reales del piloto de dIAra; el contrato y los informes son ficticios.`}</p>
     <h2>${o.estado === "revisar" ? "Por qué necesita revisión" : "Situación"}</h2>
     <ul class="razones">${porQue.map((r) => html`<li class=${r.explicada ? "explicada" : ""}>${r.texto}</li>`)}</ul>
   </div>
   <dl class="datos-clave">
     <div><dt>Institución ejecutora</dt><dd>${o.institucion_ejecutora}</dd></div>
-    <div><dt>Contratista</dt><dd>${o.contratista}</dd></div>
-    <div><dt>Monto vigente</dt><dd>${millones(o.monto_vigente_crc)}<small>${o.aumento_monto_pct > 0 ? `Original ${millones(o.monto_original_crc)}` : "Sin cambios"}</small></dd></div>
-    <div><dt>Termina</dt><dd>${fechaLarga(o.fecha_fin_vigente)}<small>${o.fase === "terminada" ? "Obra recibida" : o.prorroga_reciente ? "Con prórroga reciente" : "Plazo original"}</small></dd></div>
-    <div><dt>Avance reportado</dt><dd>${num(o.avance_reportado_pct)}&nbsp;%<small>Al ${fechaLarga(o.fecha_ultimo_informe)}</small></dd></div>
-    <div><dt>Avance previsto</dt><dd>${num(o.avance_previsto_pct)}&nbsp;%<small>Según el cronograma vigente</small></dd></div>
+    <div><dt>Contratista</dt><dd>${o.contratista || sinDato()}</dd></div>
+    <div><dt>Monto vigente</dt><dd>${tieneDato(o.monto_vigente_crc) ? html`${millones(o.monto_vigente_crc)}<small>${o.aumento_monto_pct > 0 ? `Original ${millones(o.monto_original_crc)}` : "Sin cambios"}</small>` : sinDato()}</dd></div>
+    <div><dt>Termina</dt><dd>${o.fecha_fin_vigente ? html`${fechaLarga(o.fecha_fin_vigente)}<small>${o.fase === "terminada" ? "Obra recibida" : o.prorroga_reciente ? "Con prórroga reciente" : "Plazo original"}</small>` : sinDato()}</dd></div>
+    <div><dt>Avance reportado</dt><dd>${tieneDato(o.avance_reportado_pct) ? html`${num(o.avance_reportado_pct)}&nbsp;%<small>Al ${fechaLarga(o.fecha_ultimo_informe)}</small>` : sinDato()}</dd></div>
+    <div><dt>Avance previsto</dt><dd>${tieneDato(o.avance_previsto_pct) ? html`${num(o.avance_previsto_pct)}&nbsp;%<small>Según el cronograma vigente</small>` : sinDato()}</dd></div>
   </dl>
 </section>
 
@@ -134,7 +156,7 @@ history.replaceState(null, "", `${location.search}${pestana === "resumen" ? "" :
     <div><h3>Qué sabemos</h3><ul>${queSabemos.map((t) => html`<li>${t}</li>`)}</ul></div>
     <div><h3>Qué no se puede concluir</h3><ul>${noSePuede.map((t) => html`<li>${t}</li>`)}</ul></div>
   </div>
-  <h3 style="margin-top: 2.5rem;">Actividad en las últimas 12 semanas</h3>
+  <h3 style="margin-top: 2.5rem;">Actividad por semana (hasta 12)</h3>
   ${leyendaEstados(["actividad", "sin_actividad", "sin_datos", "terminada"])}
   <div style="margin-top: 0.5rem;">${pulso(semanas12, {celda: 30, alto: 30, sep: 5})}</div>
   <p class="nota-tabla">Cada cuadro es una semana. Un punto marca una semana sin actividad que tiene una explicación posible, como un feriado o lluvia fuerte.</p>
@@ -160,7 +182,10 @@ function lineaTiempo(width) {
       Plot.rect(susp, {x1: "fecha", x2: (d) => new Date(+d.fecha + DIA), y1: 1.1, y2: 1.9, fill: "var(--niebla)"}),
       Plot.rect(datos, {
         x1: "fecha", x2: (d) => new Date(+d.fecha + 0.86 * DIA), y1: 0, y2: 1, fill: "estadoVista", stroke: "var(--trazo)", strokeWidth: 0.6,
-        title: (d) => `${fechaLarga(d.fecha)}: ${d.estadoVista.toLowerCase()}\nLa cámara envió ${num(100 * d.cobertura, 0)}\u00a0% de las fotos; ${num(100 * d.pct_actividad, 0)}\u00a0% con actividad` +
+        title: (d) => `${fechaLarga(d.fecha)}: ${d.estadoVista.toLowerCase()}\n` + (d.cobertura_supuesta
+            ? `Hay archivo de ese día (la cámara no reporta cuántas fotos tomó); ${num(100 * d.pct_actividad, 0)}\u00a0% de las fotos esperadas con actividad`
+            : d.cobertura == null ? "No hay archivo de ese día"
+            : `La cámara envió ${num(100 * d.cobertura, 0)}\u00a0% de las fotos; ${num(100 * d.pct_actividad, 0)}\u00a0% con actividad`) +
           (d.explicacion ? `\nContexto: ${d.explicacion}` : ""), tip: true
       }),
       Plot.dot(datos.filter((d) => d.explicacion && d.estado === "sin_actividad"), {x: (d) => new Date(+d.fecha + 0.43 * DIA), y: 0.5, r: 2, fill: "var(--grafito)"}),
@@ -193,7 +218,7 @@ const eventosObra = eventos.filter((e) => e.obra_id === obraId).sort((a, b) => b
 
 <section class="pestana" id="p-actividad" role="tabpanel" aria-labelledby="t-actividad" hidden>
   <h2>¿Hubo trabajo en la obra?</h2>
-  <p>Cada día de las últimas 12 semanas, con los feriados, los eventos del contrato, los reportes ciudadanos y la lluvia.</p>
+  <p>Cada día del período con cámara (hasta 12 semanas), con los feriados, los eventos del contrato, los reportes ciudadanos y la lluvia.</p>
   ${leyendaEstados()}
   <figure aria-label="Estado de cada día y eventos de la obra">${resize((width) => lineaTiempo(width))}</figure>
   <figure aria-label="Lluvia diaria en la obra">${resize((width) => lluvia(width))}</figure>
@@ -245,15 +270,16 @@ function franjaSemanas(width) {
     ]
   });
 }
-const mediana = d3.median(senales.filter((d) => d.fase !== "terminada" && !d.en_cola_dispositivos), (d) => d.proporcion_semanas_activas);
+const mediana = d3.median(senales.filter((d) => d.fase !== "terminada" && !d.en_cola_dispositivos && !d.historica), (d) => d.proporcion_semanas_activas);
+const conSerie = serie.some((d) => d.obra_id === obraId && d.serie === "previsto");
 ```
 
 <section class="pestana" id="p-avance" role="tabpanel" aria-labelledby="t-avance" hidden>
   <h2>¿Lo reportado coincide con lo que vio la cámara?</h2>
   <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad observada cada semana.</p>
-  <figure aria-label="Avance previsto, reportado y pagado de la obra">${resize((width) => contraste(width))}</figure>
-  <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>
-  <p>Esta obra tuvo actividad en <strong>${num(100 * o.proporcion_semanas_activas, 0)}&nbsp;%</strong> de las últimas 12 semanas. En la obra típica de la cartera, la cifra es ${num(100 * mediana, 0)}&nbsp;%.</p>
+  ${conSerie ? html`<figure aria-label="Avance previsto, reportado y pagado de la obra">${resize((width) => contraste(width))}</figure>
+  <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>` : html`<p class="vacio">Esta obra no tiene contrato ni informes de avance en el registro, así que no hay con qué contrastar lo observado. Cuando el gestor de datos los registre, este contraste aparecerá solo.</p>`}
+  <p>Esta obra tuvo actividad en <strong>${num(100 * o.proporcion_semanas_activas, 0)}&nbsp;%</strong> de sus semanas con datos (hasta 12). En la obra típica de la cartera, la cifra es ${num(100 * mediana, 0)}&nbsp;%.</p>
   <p class="nota-tabla">La actividad no mide el avance físico: sirve para detectar avances reportados que la cámara no respalda.</p>
 </section>
 
@@ -274,34 +300,41 @@ function marco(nombre, filas) {
   const dets = filas.filter((d) => d.clase);
   const personas = dets.filter((d) => d.clase === "Persona").length;
   const maquinas = dets.length - personas;
+  const foto = filas[0].foto ? FOTOS[nombre] : null;
   const lienzo = d3.create("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("width", "100%").attr("role", "img")
-    .attr("aria-label", `Foto de las ${hora(filas[0].fecha_hora)}: ${plural(personas, "persona", "personas")} y ${plural(maquinas, "máquina", "máquinas")}`);
-  lienzo.append("rect").attr("x", 0.5).attr("y", 0.5).attr("width", W - 1).attr("height", H - 1).attr("rx", 4)
-    .attr("fill", "var(--niebla)").attr("stroke", "var(--trazo)");
-  lienzo.append("text").attr("x", W / 2).attr("y", H / 2).attr("text-anchor", "middle").attr("fill", "var(--grafito)")
-    .attr("font-size", 12).text(dets.length ? "" : "Sin detecciones");
-  for (const d of dets) {
-    lienzo.append("rect").attr("x", d.x1 * esc).attr("y", d.y1 * esc).attr("width", (d.x2 - d.x1) * esc).attr("height", (d.y2 - d.y1) * esc)
-      .attr("fill", "none").attr("stroke", "var(--tinta)").attr("stroke-width", 1.6)
-      .attr("stroke-dasharray", d.clase === "Persona" ? null : "4,3")
-      .append("title").text(`${d.clase}, probabilidad ${num(d.probabilidad, 2)}`);
+    .attr("aria-label", `${foto ? "Foto real" : "Foto"} de las ${hora(filas[0].fecha_hora)}: ${plural(personas, "persona", "personas")} y ${plural(maquinas, "máquina", "máquinas")}`);
+  if (foto) {
+    lienzo.append("image").attr("href", foto.href).attr("width", W).attr("height", H);
+  } else {
+    lienzo.append("rect").attr("x", 0.5).attr("y", 0.5).attr("width", W - 1).attr("height", H - 1).attr("rx", 4)
+      .attr("fill", "var(--niebla)").attr("stroke", "var(--trazo)");
+    lienzo.append("text").attr("x", W / 2).attr("y", H / 2).attr("text-anchor", "middle").attr("fill", "var(--grafito)")
+      .attr("font-size", 12).text(dets.length ? "" : "Sin detecciones");
   }
-  return html`<figure>${lienzo.node()}<figcaption><b>${hora(filas[0].fecha_hora)}</b>: ${plural(personas, "persona", "personas")}, ${plural(maquinas, "máquina", "máquinas")}</figcaption></figure>`;
+  for (const d of dets) {
+    const caja = (g) => g.attr("x", d.x1 * esc).attr("y", d.y1 * esc).attr("width", (d.x2 - d.x1) * esc).attr("height", (d.y2 - d.y1) * esc)
+      .attr("fill", "none").attr("stroke-dasharray", d.clase === "Persona" ? null : "4,3");
+    if (foto) lienzo.append("rect").call(caja).attr("stroke", "var(--papel)").attr("stroke-width", 3.2);
+    lienzo.append("rect").call(caja).attr("stroke", "var(--tinta)").attr("stroke-width", 1.6)
+      .append("title").text(`${d.clase}, ${d.probabilidad == null ? "etiqueta humana" : `probabilidad ${num(d.probabilidad, 2)}`}`);
+  }
+  const origen = filas[0].fuente === "real" ? "etiquetado por personas" : filas[0].imagen_piloto ? `recuadros de la foto ${String(filas[0].imagen_piloto).slice(0, 15)} del piloto` : "";
+  return html`<figure>${lienzo.node()}<figcaption><b>${hora(filas[0].fecha_hora)}</b>: ${plural(personas, "persona", "personas")}, ${plural(maquinas, "máquina", "máquinas")}${origen ? html`<br><span class="tenue">${origen}</span>` : ""}</figcaption></figure>`;
 }
 const imagenesDia = d3.groups(evObra.filter((d) => String(d.fecha_hora).startsWith(diaEvidencia)), (d) => d.nombre_imagen);
 ```
 
 <section class="pestana" id="p-fotos" role="tabpanel" aria-labelledby="t-fotos" hidden>
   <h2>¿Qué muestran las fotos?</h2>
-  <p>Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo.</p>
+  <p>${real ? "Fotos del día elegido con los objetos que etiquetaron personas en el piloto de dIAra. El 19 de marzo incluye las fotos reales, con las personas difuminadas." : "Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo."}</p>
   ${selectorDia}
   <div class="fotos">${imagenesDia.length ? imagenesDia.map(([nombre, filas]) => marco(nombre, filas)) : html`<p class="vacio">Ese día la cámara no envió fotos.</p>`}</div>
-  <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. Como las detecciones son simuladas, se dibujan los recuadros del CSV sobre un marco vacío de 1280 por 1024 píxeles.</p>
-  <details>
+  <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. ${real ? "Donde no hay foto publicada, los recuadros se dibujan sobre un marco vacío de 1280 por 1024 píxeles." : "Esta obra es simulada: no tiene fotos propias. Cada foto con actividad repite los objetos de una foto real del piloto de la misma hora, como los habría detectado el modelo, y se dibuja sobre un marco vacío."}</p>
+  ${real ? "" : html`<details>
     <summary>Ver una foto real de una cámara de dIAra</summary>
-    <img src="./data/ejemplo-camara-diara.jpg" alt="Foto real de una cámara de dIAra durante el piloto: movimiento de tierras con una vagoneta y un cargador al fondo y un trabajador de espaldas." style="max-width: 640px; width: 100%; border-radius: 4px; margin-top: 0.75rem;">
-    <p class="nota-tabla">Imagen 20240319-085919.jpg del repositorio público de dIAra (CGR y Universidad CENFOTEC), piloto de 2024.</p>
-  </details>
+    <img src=${FOTOS["20240319-085919.jpg"].href} alt="Foto real de una cámara de dIAra durante el piloto: movimiento de tierras con una vagoneta, una aplanadora y un tractor; la persona visible está difuminada." style="max-width: 640px; width: 100%; border-radius: 4px; margin-top: 0.75rem;">
+    <p class="nota-tabla">Foto 20240319-085919.jpg del repositorio público de dIAra (CGR, CENFOTEC y GIZ), piloto de 2024, con las personas difuminadas.</p>
+  </details>`}
 </section>
 
 ```js
@@ -322,7 +355,7 @@ try { localStorage.setItem(clave, JSON.stringify({...decision, actualizado: new 
 function expedienteCSV() {
   const esc = (v) => `"${String(v ?? "").replaceAll('"', '""')}"`;
   const filas = [
-    ["Expediente de LupIA (prototipo académico; detecciones simuladas)"],
+    [`Expediente de LupIA (prototipo académico; ${real ? "detecciones reales del piloto de dIAra" : "obra simulada a partir del piloto de dIAra"})`],
     ["Fecha de corte", resumen.fecha_corte], ["Generado", new Date().toISOString()], [],
     ["Obra", `${o.obra_id}. ${o.nombre}`], ["Tipo", o.tipo], ["Cantón", o.canton],
     ["Institución ejecutora", o.institucion_ejecutora], ["Contratista", o.contratista],

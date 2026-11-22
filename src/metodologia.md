@@ -41,23 +41,22 @@ ${tablaSenales}
 
 ## Datos y actualización
 
-LupIA solo lee datos: no permite agregar ni modificar obras. Cada dato debe venir de su fuente oficial para que la evidencia sea competente; cambiarlo a mano dentro de la herramienta la debilitaría.
+LupIA trabaja con tres capas. El auditor solo lee; los datos los mantiene quien corresponde y cada cambio queda registrado. Detalle por obra en <a href="./datos.html">Datos</a>.
 
-| Dato | Fuente esperada | Quién lo mantiene | Cada cuánto | En este prototipo |
-| --- | --- | --- | --- | --- |
-| Lista de obras y contratos | SICOP | Institución ejecutora | Al firmar o modificar el contrato | Ejemplo seudonimizado |
-| Detecciones e inventario de fotos | dIAra | Contraloría (equipo de dIAra) | Diario | Simulado con el formato real |
-| Avance reportado y pagos | Informes de la ejecutora | Institución ejecutora | Quincenal o mensual | Simulado |
-| Reportes ciudadanos | Canal de denuncias | Contraloría | Al recibirse | Simulado |
-| Feriados | Ministerio de Trabajo | Equipo de LupIA | Anual | Real |
-| Lluvia | Open-Meteo | Automático | Diario | ${(([s]) => s.charAt(0).toUpperCase() + s.slice(1))([resumen.origen_clima.join(", ")])} |
+| Capa | Qué contiene | Quién la mantiene | En este prototipo |
+| --- | --- | --- | --- |
+| dIAra | Detecciones de personas y máquinas por foto | La Contraloría (equipo de dIAra); nadie las edita | 8 días reales del piloto (2024) y 8 obras simuladas a partir de ellos |
+| Registro de obras | Obras, cámaras, contratos, avance, pagos, reportes y feriados | El gestor de datos, en una hoja de Google | Obras ficticias y seudonimizadas; feriados reales |
+| Contexto | Lluvia diaria | Automático (Open-Meteo) | ${(([s]) => s.charAt(0).toUpperCase() + s.slice(1))([resumen.origen_clima.join(", ")])} |
 
-Quién mantiene cada dato dentro de la Contraloría está por confirmar con la institución. La página se reconstruye sola cada día a las 6:00 (hora de Costa Rica) y cada vez que cambian los datos.
+Cada hora, LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Quién cumple el rol de gestor dentro de la Contraloría está por confirmar con la institución.
 
 ## Límites
 
 - La cámara ve personas y máquinas, no avance físico.
-- El modelo de dIAra detecta unas 85 de cada 100 personas visibles y se entrenó solo con imágenes de la Escuela de Pocosí; en otras obras puede funcionar peor.
+- El modelo de dIAra encuentra unos 85 de cada 100 objetos visibles y se entrenó solo con fotos de la Escuela de Pococí; en otras obras puede funcionar peor.
+- Los datos públicos del piloto cubren 8 días y no traen el inventario de fotos: un día sin archivo puede ser un día sin trabajo o con la cámara apagada.
+- Las obras simuladas recombinan fotos reales del piloto: su actividad es realista, pero su contrato, sus informes y sus reportes son ficticios.
 - Los límites y la importancia de cada señal son propuestas del equipo, no de la Contraloría; se ajustan con las pruebas de usabilidad.
 
 <details class="panel">
@@ -65,11 +64,11 @@ Quién mantiene cada dato dentro de la Contraloría está por confirmar con la i
 
 ### De la foto al estado del día
 
-1. **Captura.** Cada cámara toma fotos de 5:00 a 17:59, según su firmware. La muestra real del repositorio de dIAra va cada 80 segundos; el prototipo usa una foto cada 10 minutos para que los archivos sean manejables.
+1. **Captura.** Cada cámara toma fotos de 5:00 a 17:59, según su firmware, una cada 80 segundos aproximadamente (585 por día), como en las fotos del piloto.
 2. **Detección.** El modelo de dIAra (Faster R-CNN) busca seis clases: persona, vagoneta, tractor, cargador, mezcladora y aplanadora. Solo guarda las detecciones con probabilidad mayor que 0,7, en un CSV por día con las columnas `nombre_imagen`, `clase`, `probabilidad` y `recuadro`.
-3. **Limpieza.** En producción, la probabilidad y el recuadro quedan escritos como tensores de PyTorch, por ejemplo `tensor(0.9761)`. LupIA los convierte en números, une los archivos diarios y obtiene la cámara y la hora del nombre de cada imagen.
-4. **Inventario de capturas.** El CSV de dIAra solo registra fotos con detecciones; por sí solo no distingue un día sin datos de un día sin actividad. Por eso LupIA usa un inventario de las fotos recibidas: el latido de cada cámara.
-5. **Estado del día.** Sin datos, si llegó menos del 50 % de las fotos esperadas. Actividad, si el 15 % o más de las fotos en horario laboral (6:00 a 16:59) tiene alguna detección. Sin actividad, en el resto.
+3. **Lectura.** Un adaptador (`radar/diara.py`) reconoce solo tres formatos de dIAra: el CSV de producción, donde la probabilidad y el recuadro vienen escritos como tensores de PyTorch (`tensor(0.9761)`), y las etiquetas del piloto en CSV y en JSON. Traduce las clases al español, convierte los números y obtiene la cámara y la hora del nombre de cada foto.
+4. **Inventario de capturas.** El CSV de dIAra solo registra fotos con detecciones; por sí solo no distingue un día sin datos de un día sin actividad. Por eso LupIA propone un inventario de las fotos recibidas, el latido de cada cámara. Las cámaras simuladas lo tienen; la del piloto no: para ella, un día con archivo se toma como día con cámara funcionando y un día sin archivo, como sin datos.
+5. **Estado del día.** Sin datos, si llegó menos del 50 % de las fotos esperadas (o, sin inventario, si no hay archivo). Actividad, si el 15 % o más de las fotos en horario laboral (6:00 a 16:59) tiene alguna detección. Sin actividad, en el resto.
 6. **Contexto.** Cada día sin actividad se cruza con los feriados oficiales, las suspensiones aprobadas y la lluvia diaria; desde 20 mm cuenta como lluvia fuerte.
 
 Una cámara con 3 días seguidos sin datos pasa a mantenimiento: su obra no compite por la atención del auditor, porque no se puede concluir nada sobre ella. Después de la recepción provisional, una obra no genera alertas. El monto no entra en el puntaje; va en el otro eje de la dispersión, como en una matriz de riesgo.
@@ -80,15 +79,15 @@ Todos los umbrales y pesos son supuestos del equipo, no de la CGR, y están en `
 
 | Dato | Origen | Estado |
 | --- | --- | --- |
-| Obras: tipo, cantón, monto y plazo | Valores realistas inspirados en obras públicas, con nombres y contratistas seudonimizados | Ejemplo, a reemplazar por datos de SICOP o PROERI |
-| Formato del CSV, clases, umbral y horario | Repositorio público de dIAra (CGR y Universidad CENFOTEC) | Real |
-| Detecciones e inventario de capturas | Generados con semilla fija según 8 escenarios | Simulado |
-| Avance reportado, pagos y eventos del contrato | Generados según los escenarios | Simulado |
-| Reportes ciudadanos | Redactados para los escenarios | Simulado |
-| Feriados | Calendario 2026 del Ministerio de Trabajo | Real |
+| Detecciones del piloto (8 días de 2024) y 6 fotos | Repositorio público de dIAra (CGR, CENFOTEC y GIZ), etiquetas hechas por personas; fotos con las personas difuminadas | Real |
+| Formato del CSV, clases, umbral, horario e intervalo de captura | Código de producción y firmware del repositorio de dIAra | Real |
+| Detecciones de las obras simuladas | Fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo (85,4 %) y semilla fija por obra | Simulado a partir de datos reales |
+| Obras: tipo, cantón, monto y plazo | Valores realistas, con nombres y contratistas seudonimizados, en el registro | Ejemplo, a reemplazar por datos de SICOP o PROERI |
+| Avance reportado, pagos, eventos del contrato y reportes ciudadanos | Registro de obras | Simulado |
+| Feriados 2024 y 2026 | Ministerio de Trabajo (incluye el traslado del 11 al 15 de abril de 2024) | Real |
 | Lluvia diaria | Open-Meteo (CC BY 4.0) cuando hay conexión; si no, simulada | ${resumen.origen_clima.join(", ")} |
 
-Las obras están seudonimizadas a propósito: las señales son simuladas, y ponerlas sobre obras y contratistas reales podría exponer injustamente a alguien.
+Las obras simuladas están seudonimizadas a propósito: sus señales son ficticias, y ponerlas sobre obras y contratistas reales podría exponer injustamente a alguien.
 
 ### Escenarios simulados
 
@@ -96,12 +95,13 @@ Las obras están seudonimizadas a propósito: las señales son simuladas, y pone
 | --- | --- | --- |
 | A | Paralizada desde el 19 de octubre; monto alto | Prioridad 1: inactividad, atraso y reportes ciudadanos |
 | B | Cámara caída desde el 12 de noviembre | Cola de dispositivos, no de obras |
-| C | Actividad en 3 de 12 semanas, aunque reporta avance normal | Brecha entre lo reportado y lo observado |
+| C | Trabaja una semana de cada cuatro, aunque reporta avance normal | Brecha entre lo reportado y lo observado |
 | D | Atrasada, con prórroga aprobada | Atraso y cambio contractual |
 | E | Sin actividad del 16 al 20 de noviembre por una suspensión aprobada | Alerta con explicación: se descarta con motivo |
 | F | Activa y al día | Control: sin alertas |
 | G | Recibida el 25 de septiembre | Terminada: sin alertas |
 | H | Aumento de monto y reportes ciudadanos repetidos | Contrato y ciudadanía |
+| P | Obra real del piloto de dIAra (2024), sin contrato público | Monitoreo terminado; solo las señales con dato |
 
 
 </details>

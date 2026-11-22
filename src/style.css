@@ -384,3 +384,20 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
   .razones li { font-size: var(--t-md); }
   .ficha-cabeza .posicion { border-left: 0; padding-left: 0; margin-left: 0; width: 100%; }
 }
+.etiqueta-real { display: inline-block; vertical-align: 0.15em; margin-left: 0.4rem; font-size: var(--t-xs); font-weight: 650; padding: 0.05rem 0.45rem; border: 1px solid var(--tinta); border-radius: 3px; white-space: nowrap; }
+.aviso a { color: inherit; }
+.procedencia { font-size: var(--t-sm); color: var(--grafito); margin: -0.75rem 0 1.5rem; max-width: 60ch; }
+.etiqueta-simulada { display: inline-block; margin-right: 0.35rem; font-size: var(--t-xs); font-weight: 650; padding: 0.05rem 0.45rem; border: 1px dashed var(--trazo); border-radius: 3px; color: var(--grafito); }
+.procedencia .etiqueta-real { margin: 0 0.35rem 0 0; }
+
+/* --- Datos ------------------------------------------------------------------------------ */
+.capas { list-style: none; padding: 0; margin: 1.5rem 0 0; counter-reset: capa; display: grid; gap: 0; border-top: 1.5px solid var(--tinta); }
+.capas li { counter-increment: capa; display: grid; grid-template-columns: 2.25rem 1fr; column-gap: 0.75rem; padding: 1.25rem 0; border-bottom: 1px solid var(--linea); max-width: none; }
+.capas li::before { content: counter(capa); grid-row: span 4; font-size: var(--t-xl); font-weight: 700; color: var(--grafito); line-height: 1.2; }
+.capas h2 { margin: 0 0 0.35rem; font-size: var(--t-lg); }
+.capas p { margin: 0 0 0.5rem; }
+.capas .cifras { color: var(--grafito); font-size: var(--t-sm); }
+.lectura table.tabla-datos td a { color: var(--tinta); }
+@media (max-width: 640px) {
+  .tabla-datos { display: block; overflow-x: auto; }
+}

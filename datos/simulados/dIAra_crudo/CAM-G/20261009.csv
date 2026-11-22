@@ -1,4 +1,0 @@
-nombre_imagen,clase,probabilidad,recuadro
-20261009-064021.jpg,Persona,tensor(0.9641),"tensor([103.3154, 745.1370, 149.4256, 811.7574])"
-20261009-084046.jpg,Persona,tensor(0.9445),"tensor([922.2866, 921.8997, 947.3676, 989.0486])"
-20261009-093020.jpg,Persona,tensor(0.9842),"tensor([845.0514, 362.3928, 882.5045, 457.0715])"

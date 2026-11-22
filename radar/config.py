@@ -1,4 +1,4 @@
-"""Parámetros del Radar de Obras.
+"""Parámetros de LupIA.
 
 Todo lo que cambia el resultado está aquí, en un solo lugar. Los umbrales son
 supuestos del equipo (no de la CGR) y se declaran en la metodología del informe.
@@ -10,22 +10,30 @@ from pathlib import Path
 # --- Rutas -----------------------------------------------------------------
 RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "datos"
-SIMULADOS = DATOS / "simulados"
-CRUDO_DIARA = SIMULADOS / "dIAra_crudo"   # un CSV por cámara y por día, como en producción
+DIARA_REAL = DATOS / "diara"          # capa 1: lo que entrega dIAra, tal cual (una carpeta por cámara)
+REGISTRO = DATOS / "registro"         # capa 3: base de datos propia, la mantiene el gestor de datos
+SIMULADOS = DATOS / "simulados"       # capa 2: generado a partir del piloto real (se regenera en cada corrida)
+DIARA_SIMULADO = SIMULADOS / "diara"  # mismo formato que producción: una carpeta por cámara, un CSV por día
 SALIDAS = RAIZ / "salidas"
 
 # --- Período de monitoreo ----------------------------------------------------
-INICIO_MONITOREO = date(2026, 8, 31)  # lunes: primera semana con cámaras
+# Cada cámara tiene su propio período en datos/registro/camaras.csv. FECHA_CORTE es "hoy" para
+# la cartera simulada; INICIO_MONITOREO es el inicio de la ventana de análisis (12 semanas).
+INICIO_MONITOREO = date(2026, 8, 31)  # lunes
 FECHA_CORTE = date(2026, 11, 20)      # viernes: último día con datos
 
-# --- Cámara (firmware y muestra del repositorio de dIAra) ---------------------
+# --- Cámara (firmware ESP32CAM_Timer_CGR_Day.ino y fotos del piloto) ---------------
 HORA_PRIMERA_CAPTURA = 5    # el firmware descarta horas antes de las 5:00 ...
 HORA_ULTIMA_CAPTURA = 17    # ... y desde las 18:00
-INTERVALO_MIN = 10          # la muestra real va cada ~80 s; 10 min mantiene los archivos livianos
+INTERVALO_SEG = 80          # el temporizador TPL5110 despierta la cámara cada ~80 s (fotos del piloto)
 ANCHO_IMAGEN, ALTO_IMAGEN = 1280, 1024
 
 # --- Modelo de dIAra (run_inference.py del repositorio) -------------------------
 CLASES = ["Vagoneta", "Persona", "Tractor", "Cargador", "Mezcladora", "Aplanadora"]
+# Las etiquetas del piloto usan los nombres en inglés; run_inference.py los traduce así:
+CLASES_ETIQUETADO = {"dump_truck": "Vagoneta", "person": "Persona", "excavator": "Tractor",
+                     "loader": "Cargador", "mixer_truck": "Mezcladora", "steamroller": "Aplanadora"}
+SENSIBILIDAD_MODELO = 0.854  # el modelo encuentra ~85 de cada 100 objetos (resultados del piloto)
 MAQUINARIA = [c for c in CLASES if c != "Persona"]
 UMBRAL_MODELO = 0.7         # el modelo solo guarda detecciones con probabilidad > 0,7
 
@@ -69,3 +77,6 @@ NOMBRES_SENALES = {
 DIAS_SIN_DATOS_DISPOSITIVO = 3  # días seguidos sin datos que mandan la cámara a mantenimiento
 
 SEMILLA = 2026  # misma semilla = mismos datos simulados en cualquier computadora
+
+# --- Generador a partir del piloto -----------------------------------------------------------
+ESCENARIOS = ["normal", "paralizada", "esporadica", "lenta", "falla_camara", "terminada"]

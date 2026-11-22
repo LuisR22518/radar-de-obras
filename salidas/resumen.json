@@ -1,10 +1,13 @@
 {
   "fecha_corte": "2026-11-20",
+  "obras_historicas": [
+    "P"
+  ],
   "frase": "5 obras ameritan revisión · 1 cámara lleva 9 días sin datos",
   "obras_que_ameritan_revision": [
     "A",
-    "C",
     "H",
+    "C",
     "D",
     "E"
   ],
@@ -27,5 +30,7 @@
   },
   "origen_clima": [
     "simulado"
-  ]
+  ],
+  "registro_actualizado": "",
+  "registro_hoja": ""
 }
