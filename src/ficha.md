@@ -71,8 +71,8 @@ const fecha = (d) => (d == null || d === "" ? "—" : new Date(d).getUTCFullYear
 
 ```js
 // 1 · Qué obra es, si hay trabajo y si el dato es confiable
-// Si los días sin trabajo tienen explicación registrada (suspensión, feriado, lluvia), se dice en la misma frase
-const explicacionParada = [...new Set(dias.filter((d) => d.fecha > ultimoTrabajo && d.estado === "sin_actividad" && d.explicacion).flatMap((d) => String(d.explicacion).split("; ").map((e) => e.replace(/ \(.*\)$/, ""))))];
+// La explicación es la misma que usa la lista (radar/reglas.py): solo cuenta si cubre la mitad o más de los días sin trabajo
+const explicacionParada = o.explicacion_inactividad ? String(o.explicacion_inactividad).split("; ") : [];
 const etiqueta = real
   ? html`<span class="fc-etiqueta fc-real">Datos reales del piloto de dIAra (${new Date(corte).getUTCFullYear()})</span>`
   : html`<span class="fc-etiqueta">Datos simulados</span>`;
