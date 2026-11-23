@@ -63,15 +63,19 @@ def leeme(ws):
         ["¿Qué va en cada columna? Pase el mouse sobre el encabezado: cada columna tiene una nota que lo explica."],
         ["Las pestañas grises (camaras, feriados, responsables y simulacion) son de configuración y casi nunca se tocan."],
         ["Google guarda cada versión de esta hoja (Archivo > Historial de versiones) y LupIA anota cada cambio con su valor anterior."],
-    ]
+        [],
+        ["Qué parte de la ficha de la obra usa cada pestaña"],
+        ["Pestaña", "Qué muestra en la ficha"],
+    ] + [[t, R.ALIMENTA[t]] for t in R.TABLAS]
     for f in filas:
         ws.append(f)
     ws["A1"].font = Font(bold=True, size=16, color=TINTA)
-    for celda in ("A5", "A10"):
+    for celda in ("A5", "A10", "A20"):
         ws[celda].font = Font(bold=True, size=12, color=TINTA)
-    for c in ws[6]:
-        c.font = Font(bold=True, color="FFFFFF")
-        c.fill = PatternFill("solid", fgColor=TINTA)
+    for fila in (6, 21):
+        for c in ws[fila][:3 if fila == 6 else 2]:
+            c.font = Font(bold=True, color="FFFFFF")
+            c.fill = PatternFill("solid", fgColor=TINTA)
     for col, ancho in zip("ABC", (28, 52, 80)):
         ws.column_dimensions[col].width = ancho
     for fila in ws.iter_rows(min_row=6, max_row=8):

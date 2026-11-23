@@ -31,15 +31,15 @@ TABLAS = {
         ("obra_id", "texto", True), ("hito", "texto", True), ("fecha_prevista", "fecha", True),
         ("fecha_cumplido", "fecha", False), ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
+    "avance_reportado": [
+        ("obra_id", "texto", True), ("fecha", "fecha", True), ("avance_reportado_pct", "numero", True),
+        ("documento", "texto", False), ("actualizado_por", "texto", False),
+    ],
     "eventos_contrato": [
         ("obra_id", "texto", True), ("fecha", "fecha", True),
         ("tipo", "opcion:modificacion_monto|prorroga|suspension|recepcion_provisional", True),
         ("detalle", "texto", True), ("dias_prorroga", "numero", False), ("monto_nuevo_crc", "numero", False),
         ("suspension_desde", "fecha", False), ("suspension_hasta", "fecha", False), ("documento", "texto", False), ("actualizado_por", "texto", False),
-    ],
-    "avance_reportado": [
-        ("obra_id", "texto", True), ("fecha", "fecha", True), ("avance_reportado_pct", "numero", True),
-        ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
     "pagos": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("pagado_acumulado_crc", "numero", True),
@@ -61,6 +61,19 @@ TABLAS = {
     # Solo para las obras de prueba: cómo se fabrican sus datos. No describe la obra.
     "simulacion": [("obra_id", "texto", True), ("escenario", "opcion:" + "|".join(C.ESCENARIOS), True),
                    ("desde", "fecha", False), ("actualizado_por", "texto", False)],
+}
+# Qué parte de la ficha de la obra usa cada pestaña (lo muestra la pestaña LEEME de la hoja)
+ALIMENTA = {
+    "obras": "Qué obra es, dónde está y para qué sirve",
+    "hitos": "Etapas de la obra: cumplidas, pendientes y atrasadas",
+    "avance_reportado": "Lo que reporta la ejecutora (avance en %)",
+    "eventos_contrato": "Costo, fecha de entrega y cambios al contrato",
+    "pagos": "Detalle para fiscalización: cuánto se ha pagado",
+    "reportes_ciudadanos": "Lo que reporta la gente",
+    "camaras": "Las 8 semanas de actividad (qué cámara es de cada obra)",
+    "feriados": "Que un feriado no cuente como día sin trabajo",
+    "responsables": "Quién puede editar esta hoja",
+    "simulacion": "Cómo se fabrican los datos de las obras de prueba",
 }
 # Pestañas de configuración (se tocan poco): van al final de la hoja y con otro color
 CONFIGURACION = {"camaras", "feriados", "responsables", "simulacion"}
