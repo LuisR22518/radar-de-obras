@@ -160,12 +160,13 @@ const secContrato = html`<section class="fc-bloque">
 // 3 · Fotos: las de la cámara (piloto real) o las de referencia registradas en la hoja
 const fotos = real
   ? d3.groups(evidencia.filter((d) => d.obra_id === obraId && d.foto), (d) => d.foto).map(([foto, filas]) => ({
-      clave: foto, fecha: filas[0].fecha_hora, src: FOTOS_PILOTO[foto],
+      clave: foto, fecha: new Date(String(filas[0].fecha_hora).replace(" ", "T") + "Z"), src: FOTOS_PILOTO[foto],
       pie: d3.rollups(filas.filter((d) => d.clase), (v) => v.length, (d) => d.clase).map(([c, n]) => `${n} ${c.toLowerCase()}`).join(", "),
       fuente: "camara dIAra"
     })).sort((a, b) => a.fecha - b.fecha)
   : fotosRegistro.filter((d) => d.obra_id === obraId).map((d) => ({...d, clave: d.enlace, src: d.enlace, pie: d.descripcion})).sort((a, b) => a.fecha - b.fecha);
-const etiquetaFoto = (f) => `${fecha(f.fecha)}${f.fecha?.getUTCHours?.() ? ` ${String(f.fecha.getUTCHours()).padStart(2, "0")}:${String(f.fecha.getUTCMinutes()).padStart(2, "0")}` : ""}`;
+const dosDigitos = (n) => String(n).padStart(2, "0");
+const etiquetaFoto = (f) => `${fecha(f.fecha)}${real ? `, ${dosDigitos(f.fecha.getUTCHours())}:${dosDigitos(f.fecha.getUTCMinutes())}` : ""}`;
 const elegirA = Inputs.select(fotos, {label: "Foto 1", format: etiquetaFoto, value: fotos[0]});
 const elegirB = Inputs.select(fotos, {label: "Foto 2", format: etiquetaFoto, value: fotos.at(-1)});
 async function marco(f) {
