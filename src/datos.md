@@ -12,7 +12,7 @@ const reales = fuentes.filter((d) => d.fuente_datos === "dIAra real");
 const simuladas = fuentes.filter((d) => d.fuente_datos === "simulado");
 const registro = new Map(mantenimiento.map((d) => [d.obra_id, d]));
 const camara = new Map(fuentes.map((d) => [d.obra_id, d]));
-const hora = (t) => t.replace("T", ", ");
+const hora = (t) => `${fechaTexto(String(t).slice(0, 10))}, a las ${String(t).slice(11, 16)}`;
 ```
 
 <div class="lectura">
@@ -49,7 +49,7 @@ function tablaObras() {
   return html`<table class="tabla-datos apilada" tabindex="0">
     <thead><tr><th scope="col">Obra</th><th scope="col">Origen</th><th scope="col">Última foto</th><th scope="col">Último informe de avance</th><th scope="col">Último pago registrado</th></tr></thead>
     <tbody>${filas.map(({s, r, c}) => html`<tr>
-      <td data-et="Obra"><a href=${`./obra.html?id=${s.obra_id}`}>${s.nombre}</a><br><span class="tenue">${s.canton}</span></td>
+      <td data-et="Obra"><a href=${`./ficha.html?id=${s.obra_id}`}>${s.nombre}</a><br><span class="tenue">${s.canton}</span></td>
       <td data-et="Origen">${s.fuente_datos === "dIAra real" ? html`<span class="etiqueta-real">Real</span>` : html`<span class="etiqueta-simulada">Simulada</span>`}</td>
       <td data-et="Última foto">${celdaFecha(s.ultima_captura, s.historica ? "Monitoreo terminado" : s.en_cola_dispositivos ? `Sin fotos hace ${plural(s.dias_sin_datos, "día", "días")}` : "")}</td>
       <td data-et="Último informe">${r ? celdaFecha(r.ultimo_informe, r.informe_vencido ? "Vencido" : "") : "—"}</td>
@@ -71,6 +71,6 @@ ${tablaObras()}
 - **Que el avance y los pagos sean ciertos.** Son lo que reporta la ejecutora; LupIA los compara con lo que vio la cámara, pero no revisa los documentos.
 - **Nada de las obras simuladas.** Sus contratos, informes y pagos son ficticios; solo la escuela del piloto en Pococí usa datos reales de dIAra.
 
-<p class="nota-tabla">¿Vio un dato que no cuadra? Repórtelo desde la ficha de la obra, en «Reportar un dato que no cuadra», al final de la página. La gerencia y los encargados de actualización lo corrigen desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
+<p class="nota-tabla">¿Vio un dato que no cuadra? Abra la ficha de la obra, entre a «Detalle para fiscalización» → «Abrir el análisis completo» y use «Reportar un dato que no cuadra», al final. La gerencia y los encargados de actualización lo corrigen desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
 
 </div>

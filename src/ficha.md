@@ -3,7 +3,7 @@ title: Ficha de la obra
 ---
 
 ```js
-import {Plot, fecha, fechaTexto, num, millones, plural, esReal, estiloPlot} from "./components/lupia.js";
+import {Plot, fecha as fechaDia, fechaLarga, fechaTexto, num, millones, plural, esReal, estiloPlot} from "./components/lupia.js";
 const obras = await FileAttachment("data/senales.csv").csv({typed: true});
 const registro = await FileAttachment("data/obras.csv").csv({typed: true});
 const diario = await FileAttachment("data/estado_diario.csv").csv({typed: true});
@@ -65,10 +65,14 @@ const parada = !terminada && !sinCamara && o.racha_inactividad_dias >= 5;
 const habiles = diasVentana.filter((d) => d.es_habil && d.estado !== "sin_datos");
 const habilesConTrabajo = habiles.filter((d) => d.estado === "actividad").length;
 const siguienteDia = (f) => new Date(+f + DIA);
+// Fecha corta («3 jul»); lleva el año cuando no es el del corte, para no confundir 2025 con 2026
+const fecha = (d) => (d == null || d === "" ? "—" : new Date(d).getUTCFullYear() === new Date(corte).getUTCFullYear() ? fechaDia(d) : fechaLarga(d));
 ```
 
 ```js
 // 1 · Qué obra es, si hay trabajo y si el dato es confiable
+// Si los días sin trabajo tienen explicación registrada (suspensión, feriado, lluvia), se dice en la misma frase
+const explicacionParada = [...new Set(dias.filter((d) => d.fecha > ultimoTrabajo && d.estado === "sin_actividad" && d.explicacion).flatMap((d) => String(d.explicacion).split("; ").map((e) => e.replace(/ \(.*\)$/, ""))))];
 const etiqueta = real
   ? html`<span class="fc-etiqueta fc-real">Datos reales del piloto de dIAra (${new Date(corte).getUTCFullYear()})</span>`
   : html`<span class="fc-etiqueta">Datos simulados</span>`;
@@ -77,8 +81,8 @@ const respuesta = terminada
   : sinCamara
   ? `No sabemos si hubo trabajo: la cámara no envía fotos desde el ${fechaTexto(siguienteDia(ultimoConDatos))}.`
   : parada
-  ? `La cámara no ha visto trabajo desde el ${fechaTexto(siguienteDia(ultimoTrabajo))}.`
-  : `La cámara vio trabajo ${habilesConTrabajo} de los últimos ${plural(habiles.length, "día hábil", "días hábiles")}.`;
+  ? `La cámara no ha visto trabajo desde el ${fechaTexto(siguienteDia(ultimoTrabajo))}.${explicacionParada.length ? ` Posible explicación: ${explicacionParada.join(" y ")}.` : ""}`
+  : `En las últimas ${semanas.length} semanas, la cámara vio trabajo ${habilesConTrabajo} de ${plural(habiles.length, "día hábil", "días hábiles")} con fotos.`;
 const confianza = sinCamara
   ? "Dato incompleto: la cámara dejó de enviar fotos."
   : conDatos >= 0.9 * diasVentana.length
@@ -161,7 +165,7 @@ const secContrato = html`<section class="fc-bloque">
 const fotos = real
   ? d3.groups(evidencia.filter((d) => d.obra_id === obraId && d.foto), (d) => d.foto).map(([foto, filas]) => ({
       clave: foto, fecha: new Date(String(filas[0].fecha_hora).replace(" ", "T") + "Z"), src: FOTOS_PILOTO[foto],
-      pie: d3.rollups(filas.filter((d) => d.clase), (v) => v.length, (d) => d.clase).map(([c, n]) => `${n} ${c.toLowerCase()}`).join(", "),
+      pie: d3.rollups(filas.filter((d) => d.clase), (v) => v.length, (d) => d.clase).map(([c, n]) => `${n} ${n === 1 ? c.toLowerCase() : c.toLowerCase() + (/[aeiou]$/.test(c.toLowerCase()) ? "s" : "es")}`).join(", "),
       fuente: "camara dIAra"
     })).sort((a, b) => a.fecha - b.fecha)
   : fotosRegistro.filter((d) => d.obra_id === obraId).map((d) => ({...d, clave: d.enlace, src: d.enlace, pie: d.descripcion})).sort((a, b) => a.fecha - b.fecha);
@@ -248,16 +252,25 @@ const secReporte = html`<section class="fc-bloque fc-reportar" id="reportar">
 // Detalle para fiscalización (plegable)
 const serieObra = serie.filter((d) => d.obra_id === obraId);
 const ultimoPagado = serieObra.filter((d) => d.serie === "pagado").at(-1);
-const NOMBRES_SERIE = {previsto: "Previsto por cronograma", reportado: "Reportado por la ejecutora", pagado: "Pagado"};
+const NOMBRES_SERIE = {previsto: "Previsto", reportado: "Reportado", pagado: "Pagado"};
+const porSerie = (k) => serieObra.filter((d) => d.serie === k).sort((a, b) => a.fecha - b.fecha);
+// Nombre al final de cada línea, separados para que no se encimen
+const finalesSerie = ["previsto", "reportado", "pagado"].map((k) => ({...porSerie(k).at(-1), nombre: NOMBRES_SERIE[k]}))
+  .filter((d) => d.fecha).sort((a, b) => b.valor_pct - a.valor_pct);
+for (let i = 0; i < finalesSerie.length; i++) finalesSerie[i].y = i ? Math.min(finalesSerie[i].valor_pct, finalesSerie[i - 1].y - 8) : finalesSerie[i].valor_pct;
 const secFisc = html`<details class="fc-fiscalizacion">
   <summary>Detalle para fiscalización</summary>
   <div class="fc-fisc-cuerpo">
     ${serieObra.length ? Plot.plot({
-      ...estiloPlot, height: 220, marginLeft: 40, width: Math.min(width, 760),
-      y: {domain: [0, 100], label: "% de avance o del monto", grid: true},
-      x: {type: "utc", label: null},
-      color: {domain: Object.values(NOMBRES_SERIE), range: ["var(--trazo)", "var(--tinta)", "var(--grafito)"], legend: true},
-      marks: [Plot.line(serieObra, {x: "fecha", y: "valor_pct", stroke: (d) => NOMBRES_SERIE[d.serie], strokeWidth: 2, strokeDasharray: (d) => (d.serie === "previsto" ? "4,3" : null)})]
+      style: estiloPlot, height: 230, marginLeft: 40, marginRight: 80, width: Math.min(width, 760),
+      y: {domain: [0, 100], label: "% de avance o del monto", labelArrow: "up", grid: true},
+      x: {type: "utc", label: null, tickFormat: fecha, ticks: width < 560 ? 4 : 6},
+      marks: [
+        Plot.line(porSerie("previsto"), {x: "fecha", y: "valor_pct", stroke: "var(--trazo)", strokeWidth: 1.75, strokeDasharray: "5,4"}),
+        Plot.line(porSerie("pagado"), {x: "fecha", y: "valor_pct", stroke: "var(--grafito)", strokeWidth: 1.5, curve: "step-after"}),
+        Plot.line(porSerie("reportado"), {x: "fecha", y: "valor_pct", stroke: "var(--tinta)", strokeWidth: 2.25}),
+        Plot.text(finalesSerie, {x: "fecha", y: "y", text: "nombre", dx: 8, textAnchor: "start", fill: "var(--tinta)", fontWeight: 600})
+      ]
     }) : html`<p class="fc-tenue">Sin cronograma, informes ni pagos registrados.</p>`}
     <dl class="fc-datos">
       <div><dt>Pagado</dt><dd>${ultimoPagado ? `${num(ultimoPagado.valor_pct, 0)} % del monto al ${fecha(ultimoPagado.fecha)}` : "Sin pagos registrados"}</dd></div>

@@ -71,7 +71,7 @@ Cada 15 minutos, LupIA lee la hoja del registro y revisa su calidad. Si encuentr
 5. **Estado del día.** Sin datos, si llegó menos del 50 % de las fotos esperadas (o, sin inventario, si no hay archivo). Actividad, si el 15 % o más de las fotos en horario laboral (6:00 a 16:59) tiene alguna detección. Sin actividad, en el resto.
 6. **Contexto.** Cada día sin actividad se cruza con los feriados oficiales, las suspensiones aprobadas y la lluvia diaria; desde 20 mm cuenta como lluvia fuerte.
 
-Una cámara con 3 días seguidos sin datos pasa a mantenimiento: su obra no compite por la atención del auditor, porque no se puede concluir nada sobre ella. Después de la recepción provisional, una obra no genera alertas. El monto no entra en el puntaje; va en el otro eje de la dispersión, como en una matriz de riesgo.
+Una cámara con 3 días seguidos sin datos pasa a mantenimiento: su obra no compite por la atención del auditor, porque no se puede concluir nada sobre ella. Después de la recepción provisional, una obra no genera alertas. El monto no entra en el puntaje: solo desempata. Si dos obras tienen el mismo puntaje, va antes la de mayor monto.
 
 Todos los umbrales y pesos son supuestos del equipo, no de la CGR, y están en `radar/config.py`. Las necesidades que atienden vienen de las Normas Generales de Auditoría para el Sector Público (R-DC-064-2014): valorar el riesgo para elegir qué examinar (norma 203.04), contar con evidencia suficiente, competente y pertinente (207.01) y documentar en papeles de trabajo (208.02 y 208.04).
 

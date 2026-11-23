@@ -3,7 +3,7 @@ title: Mantenimiento del registro
 ---
 
 ```js
-import {fecha, fechaLarga, plural} from "./components/lupia.js";
+import {fecha, fechaLarga, fechaTexto, plural} from "./components/lupia.js";
 const mantenimiento = await FileAttachment("data/mantenimiento.csv").csv({typed: true});
 const calidad = await FileAttachment("data/calidad.csv").csv({typed: true});
 const bitacora = await FileAttachment("data/bitacora.csv").csv({typed: true});
@@ -16,7 +16,7 @@ const DE_GERENCIA = new Set(["Obras", "Cámaras", "Feriados", "Responsables", "S
 const receptores = responsables.filter((d) => d.activo === "si" && d.correo);
 const SIN_RECEPTOR = "Los reportes de datos que hacen los auditores no tienen a quién llegar.";
 const hace = (n) => (n === 0 ? "hoy" : `hace ${plural(n, "día", "días")}`);
-const hora = (t) => String(t).slice(0, 16).replace("T", ", ");
+const hora = (t) => `${fechaTexto(String(t).slice(0, 10))}, a las ${String(t).slice(11, 16)}`;
 const corte = new Date(resumen.fecha_corte);
 
 // Bandeja: primero lo que bloquea (errores), luego lo vencido y al final los avisos
@@ -121,7 +121,7 @@ function tablaRoles() {
     [GERENCIA, "Obras, cámaras, feriados, responsables y la simulación de las obras de prueba. Decide qué obras se vigilan y avisa al equipo de dIAra cuando una cámara deja de enviar fotos.", personas(GERENCIA)],
     [ENCARGADO, "Etapas de la obra (hitos), cambios de contrato, avance reportado, pagos y reportes ciudadanos, cada fila con el documento que la respalda.", personas(ENCARGADO)],
     ["Equipo de dIAra", "Repara las cámaras. No edita la hoja.", "—"],
-    ["Auditor", "Consulta LupIA. No edita la hoja: si un dato no cuadra, lo reporta desde la ficha de la obra y el reporte llega por correo a las personas con correo registrado.", "—"]
+    ["Auditor", "Consulta LupIA. No edita la hoja: si un dato no cuadra, lo reporta desde el análisis completo de la obra y el reporte llega por correo a las personas con correo registrado.", "—"]
   ];
   return html`<table class="tabla-datos apilada" tabindex="0">
     <thead><tr><th scope="col">Rol</th><th scope="col">Qué mantiene</th><th scope="col">Personas</th></tr></thead>
@@ -143,7 +143,7 @@ function tablaBitacora() {
   if (!bitacora.length) return html`<p class="tenue">Todavía no hay cambios desde la hoja. Cada cambio quedará aquí, con la fecha, quién lo hizo y el valor anterior.</p>`;
   return html`<table class="tabla-datos" tabindex="0">
     <thead><tr><th scope="col">Cuándo</th><th scope="col">Quién</th><th scope="col">Pestaña</th><th scope="col">Registro</th><th scope="col">Campo</th><th scope="col">Antes</th><th scope="col">Después</th></tr></thead>
-    <tbody>${bitacora.map((d) => html`<tr><td>${hora(d.fecha_hora)}</td><td>${d.responsable ?? "—"}</td><td>${d.tabla}</td><td>${d.clave}</td><td>${d.campo}</td><td>${d.antes ?? "—"}</td><td>${d.despues ?? "—"}</td></tr>`)}</tbody>
+    <tbody>${bitacora.map((d) => html`<tr><td>${String(d.fecha_hora).slice(0, 16).replace("T", ", ")}</td><td>${d.responsable ?? "—"}</td><td>${d.tabla}</td><td>${d.clave}</td><td>${d.campo}</td><td>${d.antes ?? "—"}</td><td>${d.despues ?? "—"}</td></tr>`)}</tbody>
   </table>`;
 }
 ```
