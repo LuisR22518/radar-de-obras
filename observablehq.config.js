@@ -3,8 +3,7 @@
 const lupa = `<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M13 13l5 5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><circle cx="8.5" cy="8.5" r="2" fill="#ffe45c"/></svg>`;
 
 const paginas = [
-  {nombre: "Qué revisar", href: "./index.html", rutas: ["/", "/obra", "/index"]},
-  {nombre: "Ver una obra", href: "./ficha.html", rutas: ["/ficha"]},
+  {nombre: "Qué revisar", href: "./index.html", rutas: ["/", "/obra", "/index", "/ficha"]},
   {nombre: "Datos", href: "./datos.html", rutas: ["/datos"]},
   {nombre: "Cómo funciona", href: "./metodologia.html", rutas: ["/metodologia"]}
 ];

@@ -17,24 +17,24 @@ const base = senales;
 const busqueda = Inputs.text({label: "Buscar", placeholder: "Obra, cantón, provincia, contratista o institución", width: "100%"});
 const texto = Generators.input(busqueda);
 
-// Importancia de cada señal (solo cambia el orden dentro de «Necesitan revisión»)
-const formPesos = Inputs.form(Object.fromEntries(SENALES.map((s) =>
-  [s.key, Inputs.range([0, 50], {step: 5, value: resumen.pesos[s.key], label: s.corto, width: 180})])));
-formPesos.querySelectorAll('input[type="range"]').forEach((el, i) => el.setAttribute("aria-label", `Importancia de ${SENALES[i].label}`));
-const pesos = Generators.input(formPesos);
-function restablecerPesos() {
-  formPesos.value = {...resumen.pesos};
-  formPesos.dispatchEvent(new Event("input", {bubbles: true}));
-}
+// Filtros (Avance 2, figura 6): por provincia y por estado
+const provinciasLista = [...new Set(base.map((o) => o.provincia))].sort((a, b) => a.localeCompare(b, "es"));
+const filtroProvincia = Inputs.select(["Todas", ...provinciasLista], {label: "Provincia"});
+const provinciaElegida = Generators.input(filtroProvincia);
+const filtroEstado = Inputs.select(["Todos", ...Object.keys(ESTADO_OBRA)], {label: "Estado", format: (k) => (k === "Todos" ? k : ESTADO_OBRA[k].label)});
+const estadoElegido = Generators.input(filtroEstado);
+// El orden usa siempre los mismos pesos (los del cálculo): así la prioridad no depende de quién la mire
+const pesos = resumen.pesos;
 ```
 
 ```js
 const sinTildes = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const lista = ordenar(base, pesos);
 const consulta = sinTildes(texto).trim();
-const coincide = (o) => !consulta || [o.nombre, o.canton, o.provincia, o.contratista, o.institucion_ejecutora, o.tipo, o.obra_id].some((v) => sinTildes(v).includes(consulta));
+const coincide = (o) => (!consulta || [o.nombre, o.canton, o.provincia, o.contratista, o.institucion_ejecutora, o.tipo, o.obra_id].some((v) => sinTildes(v).includes(consulta)))
+  && (provinciaElegida === "Todas" || o.provincia === provinciaElegida) && (estadoElegido === "Todos" || o.estado === estadoElegido);
 const visibles = lista.filter(coincide);
-const activo = consulta ? new Set(visibles.map((o) => o.obra_id)) : null;
+const activo = visibles.length < lista.length ? new Set(visibles.map((o) => o.obra_id)) : null;
 const nRevisar = lista.filter((o) => o.estado === "revisar").length;
 const nVigentes = lista.filter((o) => !o.historica).length;
 const nReales = lista.filter(esReal).length;
@@ -44,19 +44,20 @@ const nReales = lista.filter(esReal).length;
 
 <section class="inicio" aria-labelledby="titulo">
   <h1 id="titulo"><span class="marca marca-trazo">${plural(nRevisar, "obra necesita", "obras necesitan")} revisión</span></h1>
-  <p class="bajada">De ${plural(nVigentes, "obra", "obras")} con cámara de dIAra. Empiece por la número 1: es la que reúne más señales de riesgo.</p>
+  <p class="bajada">De ${plural(nVigentes, "obra", "obras")} en seguimiento. Empiece por la número 1: es la que reúne más señales de riesgo.</p>
 </section>
 
 ```js
 function itemObra(o) {
   const registrada = accionAbierta(o.obra_id) ? CORTO[leerDecision(o.obra_id).accion] : leerDecision(o.obra_id)?.accion === "Descartar" ? "Descartada" : null;
   return html`<li class=${`item ${o.estado}`} data-obra=${o.obra_id}>
-    <a href=${`./obra.html?id=${o.obra_id}`}>
+    <a href=${`./ficha.html?id=${o.obra_id}`}>
       ${iconoEstado(o.estado, o.orden)}
       <span class="cuerpo">
         <span class="nombre">${o.estado === "revisar" ? html`<span class="marca">${o.nombre}</span>` : o.nombre}${esReal(o) ? html` <span class="etiqueta-real">Datos reales</span>` : ""}</span>
         <span class="lugar">${[o.canton, o.contratista, tieneDato(o.monto_vigente_crc) ? millones(o.monto_vigente_crc) : null].filter(Boolean).join(". ")}.</span>
         <span class="porque">${unirFrase(razonesCortas(o))}</span>
+        ${o.desempate_monto ? html`<span class="desempate">Mismo puntaje que la siguiente: va antes por tener mayor monto.</span>` : ""}
         ${o.senales_con_dato < 5 && o.estado !== "historico" ? html`<span class="faltan">Faltan datos del contrato: su lugar se calculó con ${o.senales_con_dato} de 5 señales.</span>` : ""}
       </span>
       ${registrada ? html`<span class="sello">${registrada}</span>` : ""}
@@ -87,7 +88,7 @@ function seguimiento() {
   </section>`;
 }
 function listaObras() {
-  if (!visibles.length) return html`<p class="vacio">Ninguna obra coincide con «${texto}». Revise la ortografía o borre la búsqueda para ver todas.</p>`;
+  if (!visibles.length) return html`<p class="vacio">Ninguna obra coincide con la búsqueda o los filtros. Borre la búsqueda o elija «Todas» para ver todas.</p>`;
   return html`${Object.keys(ESTADO_OBRA).map((k) => {
     const grupo = visibles.filter((o) => o.estado === k);
     if (!grupo.length) return "";
@@ -129,11 +130,12 @@ function descargarLista() {
 <div class="tablero">
   <figure class="caja-mapa">
     ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 620), activo, provincias}))}
-    <figcaption>${leyendaObra()}Cada punto lleva el número de la lista. Haga clic en una obra para ver su análisis.</figcaption>
+    <figcaption>${leyendaObra()}Cada punto lleva el número de la lista. Toque una obra para ver su ficha.</figcaption>
   </figure>
   <div class="caja-lista">
     <div class="herramientas">
       ${busqueda}
+      <div class="filtros">${filtroProvincia}${filtroEstado}</div>
       ${html`<button class="boton secundario" type="button" onclick=${descargarLista}>Descargar lista</button>`}
     </div>
     ${seguimiento()}
@@ -158,21 +160,6 @@ function puntajes() {
       <td><div class="barra"><b>${Math.round(o.puntaje_vivo)}</b><i><span class=${o.estado} style=${`width: ${o.puntaje_vivo}%`}></span></i></div></td></tr>`)}</tbody>
   </table>`;
 }
-function dispersion(width) {
-  const datos = lista.filter((d) => d.fase !== "terminada" && d.estado !== "sin_datos" && d.estado !== "historico" && tieneDato(d.monto_vigente_crc));
-  const medianaMonto = d3.median(senales, (d) => d.monto_vigente_crc);
-  return grafico({
-    width, height: 300, marginLeft: 56, marginTop: 20, marginBottom: 44, style: estiloPlot,
-    x: {domain: [0, 100], label: "Puntaje de atención", labelAnchor: "right", labelArrow: "right", grid: true},
-    y: {type: "log", domain: [1.5e8, 4e9], label: "Monto vigente (₡ millones)", labelArrow: "up", grid: true, ticks: [2e8, 5e8, 1e9, 2e9], tickFormat: (d) => num(d / 1e6, 0)},
-    marks: [
-      Plot.rect([0], {x1: 30, x2: 100, y1: medianaMonto, y2: 4e9, fill: "var(--niebla)"}),
-      Plot.text([0], {x: 98, y: 3.4e9, text: () => "Riesgo y monto altos", textAnchor: "end", fill: "var(--tinta)", fontWeight: 600}),
-      Plot.dot(datos, {x: "puntaje_vivo", y: "monto_vigente_crc", r: 11, fill: (d) => (d.estado === "revisar" ? "var(--resaltador)" : "var(--papel)"), stroke: (d) => (d.estado === "revisar" ? "var(--tinta)" : "var(--trazo)"), strokeWidth: 1.5}),
-      Plot.text(datos, {x: "puntaje_vivo", y: "monto_vigente_crc", text: "orden", fontWeight: 700, fill: "var(--tinta)"})
-    ]
-  });
-}
 ```
 
 <section class="mas" aria-label="Más detalles">
@@ -180,7 +167,7 @@ function dispersion(width) {
     <summary>¿Cómo decide LupIA el orden?</summary>
     <div class="panel-cuerpo dos-columnas">
       <div>
-        <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje. Si a una obra le falta un dato, como el contrato, el puntaje se calcula con las señales que sí tienen dato.</p>
+        <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje y, si dos obras empatan, la de mayor monto. Si a una obra le falta un dato, como el contrato, el puntaje se calcula con las señales que sí tienen dato. La importancia de cada señal es fija, para que la prioridad sea la misma para todas las personas.</p>
         <dl class="senales-texto">${SENALES.map((s) => html`<div><dt>${s.label}</dt><dd>${SENTIDO[s.key]}</dd></div>`)}</dl>
         <p><a href="./metodologia.html">Ver el detalle de cada cálculo</a></p>
       </div>
@@ -188,21 +175,6 @@ function dispersion(width) {
         <h3>Puntaje de cada obra</h3>
         ${puntajes()}
       </div>
-    </div>
-  </details>
-  <details class="panel">
-    <summary>Ajustar la importancia de cada señal</summary>
-    <div class="panel-cuerpo pesos">
-      <p>Los valores iniciales son una propuesta del equipo, no de la Contraloría. Al moverlos cambia el orden dentro de «Necesitan revisión»; qué obras entran en ese grupo no cambia.</p>
-      ${formPesos}
-      <p>${html`<button class="boton secundario" type="button" onclick=${restablecerPesos}>Volver a los valores iniciales</button>`}</p>
-    </div>
-  </details>
-  <details class="panel">
-    <summary>Comparar riesgo y monto</summary>
-    <div class="panel-cuerpo">
-      <p>El monto no entra en el puntaje. Este gráfico los cruza para distinguir qué tan probable es un problema y qué tan grande sería. Cada círculo lleva el número de la lista.</p>
-      <figure aria-label="Puntaje de atención frente al monto vigente de cada obra">${resize((width) => dispersion(Math.min(width, 720)))}</figure>
     </div>
   </details>
 </section>

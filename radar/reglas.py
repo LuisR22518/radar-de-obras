@@ -303,7 +303,10 @@ def senales(obras, camaras, eventos, diario, semanal, avance, pagos, reportes, i
     out = pd.DataFrame(filas)
     out["_orden"] = np.select([out["amerita_revision"], ~out["en_cola_dispositivos"] & ~out["historica"],
                                out["en_cola_dispositivos"]], [0, 1, 2], default=3)
-    out = out.sort_values(["_orden", "puntaje"], ascending=[True, False]).drop(columns="_orden")
+    # Con el mismo puntaje (redondeado), va primero la obra de mayor monto: es la que más fondos arriesga
+    out["_puntaje"] = out["puntaje"].round(0)
+    out["_monto"] = out["monto_vigente_crc"].fillna(0) if "monto_vigente_crc" in out else 0
+    out = out.sort_values(["_orden", "_puntaje", "_monto"], ascending=[True, False, False]).drop(columns=["_orden", "_puntaje", "_monto"])
     out["prioridad"] = range(1, len(out) + 1)
     return out.reset_index(drop=True)
 

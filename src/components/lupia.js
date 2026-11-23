@@ -145,8 +145,15 @@ export function ordenar(obras, pesos) {
   const rango = {revisar: 0, sin_alertas: 1, sin_datos: 2, historico: 3};
   return obras
     .map((o) => ({...o, estado: estadoObra(o), puntaje_vivo: o.en_cola_dispositivos || o.historica ? 0 : puntaje(o, pesos)}))
-    .sort((a, b) => rango[a.estado] - rango[b.estado] || b.puntaje_vivo - a.puntaje_vivo)
-    .map((o, i) => ({...o, orden: i + 1}));
+    .sort((a, b) => rango[a.estado] - rango[b.estado] || Math.round(b.puntaje_vivo) - Math.round(a.puntaje_vivo)
+      || (b.monto_vigente_crc || 0) - (a.monto_vigente_crc || 0))
+    .map((o, i, todas) => {
+      // Desempate por monto (decisión 6): mismo grupo y mismo puntaje que la obra siguiente, pero monto mayor
+      const sig = todas[i + 1];
+      const desempate = o.estado === "revisar" && sig && sig.estado === o.estado && Math.round(sig.puntaje_vivo) === Math.round(o.puntaje_vivo)
+        && (o.monto_vigente_crc || 0) > (sig.monto_vigente_crc || 0);
+      return {...o, orden: i + 1, desempate_monto: desempate};
+    });
 }
 
 // Razones cortas, para leer de un vistazo en la lista.
@@ -190,27 +197,6 @@ export function leyendaObra() {
 }
 
 // Mapa de Costa Rica con un punto por obra; cada punto lleva el número de la lista.
-// Dónde va el nombre de cada provincia (el centro geométrico cae mal en las provincias alargadas)
-const ETIQUETA_PROVINCIA = {"Guanacaste": [-85.45, 10.45], "Puntarenas": [-83.6, 8.85], "Alajuela": [-84.45, 10.6], "Limón": [-83.25, 9.85],
-  "Heredia": [-84.05, 10.4], "San José": [-84.0, 9.55], "Cartago": [-83.7, 9.75]};
-// Coloca el nombre del cantón junto a cada punto sin tapar otros puntos ni otros nombres:
-// prueba a la derecha, a la izquierda, abajo y arriba, empezando por las obras más urgentes.
-function etiquetasCanton(puntos, tam) {
-  const cajas = puntos.map(({x, y}) => [x - tam / 2, y - tam / 2, x + tam / 2, y + tam / 2]);
-  const choca = (c) => cajas.some((b) => c[0] < b[2] && c[2] > b[0] && c[1] < b[3] && c[3] > b[1]);
-  return [...puntos].sort((a, b) => a.o.orden - b.o.orden).map((p) => {
-    const ancho = p.o.canton.length * 6.6 + 4, alto = 14, r = tam / 2 + 4;
-    const opciones = [
-      {x: p.x + r, y: p.y + 4, anchor: "start", caja: [p.x + r, p.y - 8, p.x + r + ancho, p.y + 6]},
-      {x: p.x - r, y: p.y + 4, anchor: "end", caja: [p.x - r - ancho, p.y - 8, p.x - r, p.y + 6]},
-      {x: p.x, y: p.y + r + 10, anchor: "middle", caja: [p.x - ancho / 2, p.y + r - 2, p.x + ancho / 2, p.y + r + alto]},
-      {x: p.x, y: p.y - r - 2, anchor: "middle", caja: [p.x - ancho / 2, p.y - r - alto, p.x + ancho / 2, p.y - r + 2]}
-    ];
-    const elegida = opciones.find((op) => !choca(op.caja)) ?? opciones[0];
-    cajas.push(elegida.caja);
-    return {o: p.o, ...elegida};
-  });
-}
 export function mapaObras(pais, obras, {width = 520, activo = null, provincias = null} = {}) {
   const alto = Math.round(width * 0.9);
   const proy = d3.geoMercator().fitExtent([[16, 16], [width - 16, alto - 16]], pais);
@@ -238,16 +224,12 @@ export function mapaObras(pais, obras, {width = 520, activo = null, provincias =
     <text x=${proy([-85.55, 8.55])[0]} y=${proy([-85.55, 8.55])[1]} class="mar">Océano Pacífico</text>
     <path d=${camino(pais)} fill="var(--niebla)" stroke="var(--trazo)" stroke-width="1" stroke-linejoin="round"/>
     ${provincias ? provincias.features.map((f) => svg`<path d=${camino(f)} class="provincia" />`) : ""}
-    ${provincias && width >= 380 ? provincias.features.map((f) => {
-      const [x, y] = proy(ETIQUETA_PROVINCIA[f.properties.nombre] ?? d3.geoCentroid(f));
-      return svg`<text x=${x} y=${y} class="nombre-provincia">${f.properties.nombre}</text>`;
-    }) : ""}
+
     ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="1" />
       <circle cx=${p.x0} cy=${p.y0} r="2" fill="var(--grafito)" />` : "")}
-    ${puntos.map(({o, x, y}) => svg`<a href=${`./obra.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
+    ${puntos.map(({o, x, y}) => svg`<a href=${`./ficha.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>
       <title>${`${o.orden}. ${o.nombre} (${o.canton}): ${ESTADO_OBRA[o.estado].label.toLowerCase()}`}</title>
-      ${iconoEstado(o.estado, o.orden, tam)}</a>`)}
-    ${width >= 420 ? etiquetasCanton(puntos, tam).map(({o, x, y, anchor}) => svg`<text x=${x} y=${y} text-anchor=${anchor} class=${`canton-pin${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} aria-hidden="true">${o.canton}</text>`) : ""}`}
+      ${iconoEstado(o.estado, o.orden, tam)}</a>`)}`}
   </svg>`;
 }

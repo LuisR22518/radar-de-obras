@@ -272,7 +272,7 @@ const secFisc = html`<details class="fc-fiscalizacion">
 
 ```js
 display(html`<div class="ficha-c">
-  <div class="fc-arriba">${selector}</div>
+  <div class="fc-arriba"><a class="fc-volver" href="./index.html">← Volver a la lista</a>${selector}</div>
   ${secCabeza}
   <div class="fc-columnas">
     <div class="fc-col">${secSemanas}${secEtapas}${secContrato}</div>
