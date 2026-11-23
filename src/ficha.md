@@ -172,12 +172,13 @@ const elegirB = Inputs.select(fotos, {label: "Foto 2", format: etiquetaFoto, val
 async function marco(f) {
   if (!f) return html`<figure class="fc-foto fc-foto-vacia"><div>Sin foto</div></figure>`;
   const src = typeof f.src === "string" ? f.src : await f.src.url();
-  return html`<figure class="fc-foto"><img src=${src} alt=${f.pie || `Foto de la obra, ${fecha(f.fecha)}`} loading="lazy"><figcaption><b>${etiquetaFoto(f)}</b>${f.pie ? ` · ${f.pie}` : ""}</figcaption></figure>`;
+  const credito = f.autor ? html`<span class="fc-credito">${f.pagina_fuente ? html`<a href=${f.pagina_fuente} target="_blank" rel="noopener">${f.autor}</a>` : f.autor}${f.licencia ? `, ${f.licencia}` : ""}</span>` : "";
+  return html`<figure class="fc-foto"><img src=${src} alt=${f.pie || `Foto de la obra, ${fecha(f.fecha)}`} loading="lazy"><figcaption><b>${etiquetaFoto(f)}</b>${f.pie ? ` · ${f.pie}` : ""}${credito}</figcaption></figure>`;
 }
 const aviso = real
   ? "Fotos reales de la cámara del piloto, con las personas difuminadas. Lo que dice cada foto es lo que detectó la IA."
   : fotos.length
-  ? html`Fotos de referencia: <b>no son de esta obra</b>. ${[...new Set(fotos.map((f) => [f.autor, f.licencia].filter(Boolean).join(", ")).filter(Boolean))].map((t) => `Autor: ${t}.`).join(" ")}`
+  ? html`<b>Fotos de referencia: no son de esta obra.</b> Muestran cómo se ve una obra parecida en esa etapa. Cuando la obra tenga cámara de dIAra, aquí irán sus fotos reales.`
   : "";
 // Al cambiar de foto solo se reemplaza esa foto, sin redibujar la página
 const cajaA = html`<div>${await marco(elegirA.value)}</div>`;

@@ -30,7 +30,8 @@ TABLAS = {
     "fotos": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("enlace", "texto", True),
         ("fuente", "opcion:referencia externa|camara dIAra", True), ("autor", "texto", False),
-        ("licencia", "texto", False), ("descripcion", "texto", False), ("actualizado_por", "texto", False),
+        ("licencia", "texto", False), ("pagina_fuente", "texto", False), ("descripcion", "texto", False),
+        ("actualizado_por", "texto", False),
     ],
     "hitos": [
         ("obra_id", "texto", True), ("hito", "texto", True), ("fecha_prevista", "fecha", True),
@@ -130,6 +131,7 @@ DESCRIPCIONES = {
         "enlace": "Dirección https de la imagen (por ejemplo, de Wikimedia Commons).",
         "fuente": "referencia externa: foto de otra obra, solo de ejemplo. camara dIAra: foto de la cámara de esta obra.",
         "autor": "Autor de la foto, para citarlo.", "licencia": "Licencia de uso (por ejemplo, CC BY-SA 4.0).",
+        "pagina_fuente": "Página de la foto en su sitio de origen (por ejemplo, su página en Wikimedia Commons), para citarla.",
         "descripcion": "Qué se ve en la foto, en pocas palabras (sirve como texto alternativo).",
     },
     "hitos": {
@@ -349,8 +351,9 @@ def _revisar(t: dict, problemas: list):
         if s["escenario"] in ("paralizada", "falla_camara", "terminada") and pd.isna(s["desde"]):
             problemas.append(Problema("error", "simulacion", i + 2, f"El escenario «{s['escenario']}» necesita «desde»."))
     for i, f in t["fotos"].iterrows():
-        if f["enlace"] and not str(f["enlace"]).startswith("https://"):
-            problemas.append(Problema("error", "fotos", i + 2, "«enlace» debe empezar con https://."))
+        for col in ("enlace", "pagina_fuente"):
+            if f[col] and not str(f[col]).startswith("https://"):
+                problemas.append(Problema("error", "fotos", i + 2, f"«{col}» debe empezar con https://."))
     hoy = pd.Timestamp.now(tz="America/Costa_Rica").tz_localize(None).normalize()
     for i, h in t["hitos"].iterrows():
         if pd.notna(h["fecha_cumplido"]) and h["fecha_cumplido"] > hoy:
