@@ -781,3 +781,5 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 .fc-reportar form > div, .fc-reportar textarea { width: 100% !important; max-width: none !important; box-sizing: border-box; }
 .fc-reportar textarea { font: inherit; font-size: 1rem; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--borde-control); min-height: 5.5rem; }
 .fc-reportar .fc-tenue { font-size: var(--t-sm); }
+.portada-buscador form, .fc-reportar form, .ficha-c .fc-elegir form { align-items: stretch !important; gap: 0.35rem !important; }
+.portada-buscador form label, .fc-reportar form label { align-self: flex-start; text-align: left; }
