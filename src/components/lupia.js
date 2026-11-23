@@ -22,19 +22,19 @@ export const num = (x, decimales = 1) => Number(x).toLocaleString("es-CR", {maxi
 export const millones = (crc) => `₡${num(crc / 1e6, 0)} millones`;
 export const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 
-// Estados de un día o una semana: tinta, vacío, rayado de plano o gris de obra terminada.
+// Estados de un día o una semana: cada uno con color, borde y forma (WCAG 1.4.1: el color nunca va solo).
 export const ESTADOS = {
-  actividad: {label: "Actividad", fill: "var(--tinta)"},
-  sin_actividad: {label: "Sin actividad", fill: "var(--papel)"},
-  sin_datos: {label: "Sin datos de la cámara", fill: "url(#lupia-rayado)"},
-  terminada: {label: "Obra terminada", fill: "var(--niebla)"}
+  actividad: {label: "Actividad", fill: "var(--c-trabajo)", stroke: "var(--c-trabajo)"},
+  sin_actividad: {label: "Sin actividad", fill: "var(--papel)", stroke: "var(--c-alerta)"},
+  sin_datos: {label: "Sin datos de la cámara", fill: "url(#lupia-rayado)", stroke: "var(--trazo)"},
+  terminada: {label: "Obra terminada", fill: "var(--niebla)", stroke: "var(--trazo)"}
 };
 export const escalaEstados = (claves = Object.keys(ESTADOS)) => ({
   type: "ordinal", domain: claves.map((k) => ESTADOS[k].label), range: claves.map((k) => ESTADOS[k].fill), legend: false
 });
 
 function muestra(k, tam = 12) {
-  return svg`<svg width=${tam} height=${tam} aria-hidden="true"><rect x="0.75" y="0.75" width=${tam - 1.5} height=${tam - 1.5} rx="2" fill=${ESTADOS[k].fill} stroke=${k === "actividad" ? "var(--tinta)" : "var(--trazo)"} stroke-width="1"/></svg>`;
+  return svg`<svg width=${tam} height=${tam} aria-hidden="true"><rect x="0.75" y="0.75" width=${tam - 1.5} height=${tam - 1.5} rx="2" fill=${ESTADOS[k].fill} stroke=${ESTADOS[k].stroke} stroke-width="1.5"/></svg>`;
 }
 export function leyendaEstados(claves = Object.keys(ESTADOS)) {
   return html`<div class="leyenda">${claves.map((k) => html`<span>${muestra(k)}${ESTADOS[k].label}</span>`)}</div>`;
@@ -90,7 +90,7 @@ export function pulso(semanas, {celda = 11, alto = 18, sep = 3} = {}) {
   return svg`<svg width=${n * (celda + sep)} height=${alto} role="img" aria-label=${etiqueta}>${semanas.map((s, i) => svg`<rect
     x=${i * (celda + sep) + 0.5} y="0.5" width=${celda} height=${alto - 1} rx="2"
     fill=${ESTADOS[s.estado_semana].fill}
-    stroke=${s.estado_semana === "actividad" ? "var(--tinta)" : "var(--trazo)"} stroke-width="1"><title>${`Semana del ${fecha(s.semana)}: ${ESTADOS[s.estado_semana].label.toLowerCase()}` + (s.con_explicacion ? " (con explicación)" : "")}</title></rect>${
+    stroke=${ESTADOS[s.estado_semana].stroke} stroke-width="1.5"><title>${`Semana del ${fecha(s.semana)}: ${ESTADOS[s.estado_semana].label.toLowerCase()}` + (s.con_explicacion ? " (con explicación)" : "")}</title></rect>${
     s.con_explicacion ? svg`<circle cx=${i * (celda + sep) + 0.5 + celda / 2} cy=${alto / 2} r="2" fill="var(--grafito)"/>` : ""}`)}</svg>`;
 }
 
@@ -181,16 +181,31 @@ export function leerDecision(id) {
   try { return JSON.parse(localStorage.getItem(`lupia-decision-${id}`) ?? "null"); } catch { return null; }
 }
 
-// Ícono de estado (no depende solo del color): círculo resaltado, círculo vacío o rayado
+// Ícono de estado (no depende solo del color): ámbar con borde grueso, verde azulado, rayado o punteado
+const ICONO_ESTADO = {
+  revisar: {relleno: "var(--c-alerta-suave)", borde: "var(--c-alerta)", texto: "var(--c-alerta-texto)", grosor: 2},
+  sin_alertas: {relleno: "var(--c-trabajo-suave)", borde: "var(--c-trabajo)", texto: "var(--c-trabajo-texto)", grosor: 1.5},
+  sin_datos: {relleno: "url(#lupia-rayado)", borde: "var(--trazo)", texto: "var(--grafito)", grosor: 1.25},
+  historico: {relleno: "var(--papel)", borde: "var(--trazo)", texto: "var(--grafito)", grosor: 1.25}
+};
 export function iconoEstado(estado, numero, tam = 26) {
   const r = tam / 2 - 1.5;
-  const relleno = {revisar: "var(--resaltador)", sin_alertas: "var(--papel)", sin_datos: "url(#lupia-rayado)", historico: "var(--papel)"}[estado];
-  const borde = estado === "revisar" ? "var(--tinta)" : "var(--trazo)";
+  const e = ICONO_ESTADO[estado];
   return svg`<svg class="icono-estado" width=${tam} height=${tam} viewBox="0 0 ${tam} ${tam}" aria-hidden="true">
-    <circle cx=${tam / 2} cy=${tam / 2} r=${r} fill=${relleno} stroke=${borde} stroke-width=${estado === "revisar" ? 1.75 : 1.25} stroke-dasharray=${estado === "historico" ? "2.5 2" : "none"} />
+    <circle cx=${tam / 2} cy=${tam / 2} r=${r} fill=${e.relleno} stroke=${e.borde} stroke-width=${e.grosor} stroke-dasharray=${estado === "historico" ? "2.5 2" : "none"} />
     ${numero == null ? "" : svg`<text x=${tam / 2} y=${tam / 2} dy="0.36em" text-anchor="middle" font-size=${tam * 0.46} font-weight="700"
-      fill=${estado === "revisar" ? "var(--tinta)" : "var(--grafito)"} paint-order="stroke" stroke=${estado === "sin_datos" ? "var(--papel)" : "none"} stroke-width="3">${numero}</text>`}
+      fill=${e.texto} paint-order="stroke" stroke=${estado === "sin_datos" ? "var(--papel)" : "none"} stroke-width="3">${numero}</text>`}
   </svg>`;
+}
+// Etiqueta de estado: ícono y texto, en el color del estado
+export const chipEstado = (estado) => html`<span class=${`chip chip-${estado}`}>${iconoEstado(estado, null, 12)}${ESTADO_OBRA[estado].label}</span>`;
+
+// Miniatura de Wikimedia Commons (330 px de ancho) para no descargar la foto completa en las tarjetas
+export function miniatura(url) {
+  const u = String(url ?? "");
+  if (/\/\d+px-[^/]+$/.test(u)) return u.replace(/\/\d+px-([^/]+)$/, "/330px-$1");
+  const m = u.match(/^https:\/\/upload\.wikimedia\.org\/wikipedia\/commons\/([0-9a-f])\/([0-9a-f]{2})\/([^/]+)$/);
+  return m ? `https://upload.wikimedia.org/wikipedia/commons/thumb/${m[1]}/${m[2]}/${m[3]}/330px-${m[3]}` : u;
 }
 export function leyendaObra() {
   return html`<div class="leyenda">${Object.entries(ESTADO_OBRA).map(([k, e]) => html`<span>${iconoEstado(k, null, 12)}${e.label}</span>`)}</div>`;
@@ -221,7 +236,7 @@ export function mapaObras(pais, obras, {width = 420, activo = null} = {}) {
     }
   }
   return html`<svg class="mapa" viewBox="0 0 ${width} ${alto}" width=${width} height=${alto} aria-hidden="true">
-    ${svg`<path d=${camino(pais)} fill="var(--niebla)" stroke="none"/>
+    ${svg`<path d=${camino(pais)} fill="var(--mapa-tierra)" stroke="none"/>
     ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="0.75" />` : "")}
     ${puntos.map(({o, x, y}) => svg`<a href=${`./ficha.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>

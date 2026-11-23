@@ -3,7 +3,7 @@ title: Ficha de la obra
 ---
 
 ```js
-import {Plot, fecha as fechaDia, fechaLarga, fechaTexto, num, millones, plural, esReal, estiloPlot} from "./components/lupia.js";
+import {Plot, fecha as fechaDia, fechaLarga, fechaTexto, num, millones, plural, esReal, estiloPlot, estadoObra, chipEstado, razonesCortas, unirFrase} from "./components/lupia.js";
 const obras = await FileAttachment("data/senales.csv").csv({typed: true});
 const registro = await FileAttachment("data/obras.csv").csv({typed: true});
 const diario = await FileAttachment("data/estado_diario.csv").csv({typed: true});
@@ -88,19 +88,38 @@ const confianza = sinCamara
   : conDatos >= 0.9 * diasVentana.length
   ? `Dato confiable: la cámara envió fotos ${conDatos} de ${diasVentana.length} días.`
   : `Dato con vacíos: la cámara envió fotos solo ${conDatos} de ${diasVentana.length} días.`;
-const botonReporte = html`<a class="fc-boton" href="#reportar">Reportar algo que vi</a>`;
-const secCabeza = html`<header class="fc-cabeza">
-  <div>
-    ${etiqueta}
+// Tono de la respuesta: ámbar si hay algo que mirar, verde azulado si hay trabajo normal, gris si no hay datos
+const estado = estadoObra(o);
+const tono = terminada ? "neutro" : sinCamara ? "gris" : parada || o.amerita_revision ? "alerta" : "ok";
+const ICONO_TONO = {neutro: "✓", gris: "?", alerta: "!", ok: "✓"};
+const alertasTexto = o.amerita_revision && !sinCamara && !terminada ? unirFrase(razonesCortas(o)) : "";
+const proporcionDatos = diasVentana.length ? conDatos / diasVentana.length : 0;
+const nivelConfianza = sinCamara ? "Dato incompleto" : proporcionDatos >= 0.9 ? "Dato confiable" : "Dato con vacíos";
+const datosAl = real ? `Datos de ${fecha(o.periodo_desde)} a ${fecha(corte)} de ${new Date(corte).getUTCFullYear()}.` : `Datos al ${fechaTexto(corte)}.`;
+const sirve = reg?.necesidad_publica
+  ? html`<p class="fc-sirve"><span>Sirve para</span> ${reg.necesidad_publica}</p>`
+  : html`<p class="fc-sirve fc-tenue">No se ha registrado para qué sirve esta obra.</p>`;
+const secCabeza = html`<header class="fc-hero tarjeta">
+  <div class="fc-hero-texto">
+    <div class="fc-etiquetas">${etiqueta}${chipEstado(estado)}</div>
     <h1>${o.nombre}</h1>
-    <p class="fc-lugar">${o.canton}, ${o.provincia}</p>
-    ${reg?.necesidad_publica ? html`<p class="fc-sirve"><b>Sirve para:</b> ${reg.necesidad_publica}</p>` : html`<p class="fc-sirve fc-tenue">No se ha registrado para qué sirve esta obra.</p>`}
+    <p class="fc-lugar">${o.canton}, ${o.provincia} · ${o.institucion_ejecutora}</p>
+    ${sirve}
+    <a class="fc-boton" href="#reportar">Reportar algo que vi</a>
   </div>
-  <div class="fc-boton-arriba">${botonReporte}</div>
+  <div class="fc-hero-foto">${await marco(fotos.at(-1))}</div>
 </header>
-<section class="fc-respuesta" aria-label="Respuesta rápida">
-  <p class="fc-frase">${respuesta}</p>
-  <p class="fc-confianza">${confianza}${real ? ` Datos de ${fecha(o.periodo_desde)} a ${fecha(corte)} de ${new Date(corte).getUTCFullYear()}.` : ` Datos al ${fechaTexto(corte)}.`}</p>
+<section class=${`fc-respuesta fc-${tono}`} aria-label="Respuesta rápida">
+  <span class="fc-respuesta-icono" aria-hidden="true">${ICONO_TONO[tono]}</span>
+  <div>
+    <p class="fc-frase">${respuesta}</p>
+    ${alertasTexto ? html`<p class="fc-alertas"><b>Por qué LupIA la marcó:</b> ${alertasTexto}</p>` : ""}
+    <div class="fc-confianza">
+      <b>${nivelConfianza}</b>
+      <span class="fc-medidor" role="img" aria-label=${`La cámara envió fotos ${conDatos} de ${diasVentana.length} días`}><span style=${`width: ${Math.round(100 * proporcionDatos)}%`}></span></span>
+      <span>${sinCamara ? "La cámara dejó de enviar fotos." : `La cámara envió fotos ${conDatos} de ${diasVentana.length} días.`} ${datosAl}</span>
+    </div>
+  </div>
 </section>`;
 ```
 
@@ -122,7 +141,7 @@ const tira = html`<div class="fc-semanas" role="group" aria-label="Actividad por
   b.onclick = () => verSemana(s, b);
   return b;
 })}</div>`;
-const secSemanas = html`<section class="fc-bloque">
+const secSemanas = html`<section class="fc-bloque tarjeta">
   <h2>Últimas ${semanas.length} semanas</h2>
   ${tira}
   <div class="fc-fechas"><span>${semanas.length ? fecha(semanas[0].semana) : ""}</span><span>${fecha(corte)}</span></div>
@@ -137,8 +156,21 @@ const hoy = new Date();
 const etapas = hitos.filter((d) => d.obra_id === obraId).sort((a, b) => a.fecha_prevista - b.fecha_prevista)
   .map((h) => ({...h, estado: h.fecha_cumplido ? "cumplida" : h.fecha_prevista < hoy ? "atrasada" : "pendiente"}));
 const ICONO = {cumplida: "✓", atrasada: "!", pendiente: "○"};
-const secEtapas = html`<section class="fc-bloque">
+function lineaEtapas() {
+  const fechas = etapas.flatMap((h) => [h.fecha_prevista, h.fecha_cumplido].filter(Boolean));
+  const ini = d3.min([...fechas, hoy]), fin = d3.max([...fechas, hoy]);
+  const x = (d) => `${(100 * (d - ini)) / (fin - ini || 1)}%`;
+  return html`<div class="fc-linea" aria-hidden="true">
+    <span class="fc-linea-base"></span>
+    <span class="fc-linea-hecha" style=${`width: ${x(hoy)}`}></span>
+    ${etapas.map((h) => html`<span class=${`fc-hito fc-hito-${h.estado}`} style=${`left: ${x(h.fecha_cumplido ?? h.fecha_prevista)}`} title=${h.hito}>${ICONO[h.estado]}</span>`)}
+    <span class="fc-hoy" style=${`left: ${x(hoy)}`}><span>hoy</span></span>
+  </div>
+  <div class="fc-linea-fechas"><span>${fecha(ini)}</span><span>${fecha(fin)}</span></div>`;
+}
+const secEtapas = html`<section class="fc-bloque tarjeta">
   <h2>Etapas de la obra</h2>
+  ${etapas.length ? lineaEtapas() : ""}
   ${etapas.length ? html`<ul class="fc-etapas">${etapas.map((h) => html`<li class="fc-etapa-${h.estado}">
     <span class="fc-icono" aria-hidden="true">${ICONO[h.estado]}</span>
     <span><b>${h.hito}</b> · ${h.estado === "cumplida" ? `cumplida el ${fecha(h.fecha_cumplido)}` : h.estado === "atrasada" ? html`<strong>atrasada</strong> (prevista para el ${fecha(h.fecha_prevista)})` : `prevista para el ${fechaTexto(h.fecha_prevista)}`}</span>
@@ -149,10 +181,23 @@ const secEtapas = html`<section class="fc-bloque">
 ```js
 // 5 · Lo que dice la ejecutora y el contrato
 const cambios = contrato.filter((d) => d.tipo !== "recepcion_provisional");
-const secContrato = html`<section class="fc-bloque">
+const barraAvance = (etiqueta, valor, clase) => html`<div class=${`fc-barra ${clase}`}>
+  <span class="fc-barra-etq">${etiqueta}</span>
+  <span class="fc-barra-pista"><span style=${`width: ${Math.max(0, Math.min(100, valor))}%`}></span></span>
+  <b>${num(valor, 0)}&nbsp;%</b>
+</div>`;
+const tieneAvance = o.avance_reportado_pct != null && !Number.isNaN(o.avance_reportado_pct);
+const tienePrevisto = o.avance_previsto_pct != null && !Number.isNaN(o.avance_previsto_pct);
+const secContrato = html`<section class="fc-bloque tarjeta fc-contrato">
   <h2>Lo que dice la ejecutora y el contrato</h2>
+  ${tieneAvance ? html`<p class="fc-cifra-grande">${num(o.avance_reportado_pct, 0)}&nbsp;%<small>de avance, según el informe de la ejecutora del ${fecha(o.fecha_ultimo_informe)}</small></p>
+    <div class="fc-barras">
+      ${barraAvance("Reportado", o.avance_reportado_pct, "rep")}
+      ${tienePrevisto ? barraAvance("Previsto", o.avance_previsto_pct, "prev") : ""}
+    </div>
+    ${tienePrevisto ? html`<p class="fc-tenue fc-nota-barras">Previsto: lo que el cronograma esperaba para la fecha de ese informe.</p>` : ""}`
+  : html`<p class="fc-tenue">No hay informes de avance registrados.</p>`}
   <dl class="fc-datos">
-    <div><dt>Avance reportado por la ejecutora</dt><dd>${o.avance_reportado_pct != null ? html`${num(o.avance_reportado_pct, 0)}&nbsp;% <small>(informe del ${fecha(o.fecha_ultimo_informe)})</small>` : "No hay informes registrados"}</dd></div>
     <div><dt>Costo</dt><dd>${o.monto_vigente_crc ? millones(o.monto_vigente_crc) : "No es público"}${o.monto_vigente_crc && o.monto_original_crc && o.monto_vigente_crc !== o.monto_original_crc ? html` <small>(era ${millones(o.monto_original_crc)})</small>` : ""}</dd></div>
     <div><dt>Fecha de entrega</dt><dd>${o.fecha_fin_vigente ? fechaTexto(o.fecha_fin_vigente) : "No es pública"}</dd></div>
     <div><dt>Cambios al contrato</dt><dd>${cambios.length ? html`<ul>${cambios.map((d) => html`<li>${d.detalle} (${fecha(d.fecha)})</li>`)}</ul>` : "Ninguno registrado"}</dd></div>
@@ -190,7 +235,7 @@ const cajaA = html`<div>${await marco(elegirA.value)}</div>`;
 const cajaB = html`<div>${await marco(elegirB.value)}</div>`;
 elegirA.addEventListener("input", async () => cajaA.replaceChildren(await marco(elegirA.value)));
 elegirB.addEventListener("input", async () => cajaB.replaceChildren(await marco(elegirB.value)));
-const secFotos = html`<section class="fc-bloque">
+const secFotos = html`<section class="fc-bloque tarjeta">
   <h2>Compare dos fotos</h2>
   ${fotos.length
     ? html`<div class="fc-elegir">${elegirA}${elegirB}</div>
@@ -210,7 +255,7 @@ else notas.push("Ver personas o máquinas no mide cuánto avanzó la obra: el av
 for (const s of suspensiones) notas.push(`Hay una suspensión registrada en el contrato: ${s.detalle.toLowerCase()} (${fecha(s.fecha)}).`);
 if (o.explicacion_inactividad) notas.push(`Posible explicación registrada: ${o.explicacion_inactividad}.`);
 if (!real) notas.push("Esta es una obra de prueba: sus datos son simulados a partir del piloto real de dIAra.");
-const secLimites = html`<section class="fc-bloque fc-limites">
+const secLimites = html`<section class="fc-bloque tarjeta fc-limites">
   <h2>Qué no se puede concluir</h2>
   ${notas.map((n) => html`<p>${n}</p>`)}
 </section>`;
@@ -238,7 +283,7 @@ copiar.onclick = async () => {
   catch { copiar.textContent = "Selecciónelo y cópielo a mano"; }
 };
 const canal = resumen.canal_denuncias;
-const secReporte = html`<section class="fc-bloque fc-reportar" id="reportar">
+const secReporte = html`<section class="fc-bloque tarjeta fc-reportar" id="reportar">
   <h2>Reportar algo que vi</h2>
   <p>LupIA no recibe denuncias: le arma el reporte con la evidencia para que lo envíe por el canal oficial de la Contraloría. Así su reporte llega con fechas y datos, no solo con lo que vio.</p>
   ${queVio}
@@ -258,7 +303,7 @@ const porSerie = (k) => serieObra.filter((d) => d.serie === k).sort((a, b) => a.
 const finalesSerie = ["previsto", "reportado", "pagado"].map((k) => ({...porSerie(k).at(-1), nombre: NOMBRES_SERIE[k]}))
   .filter((d) => d.fecha).sort((a, b) => b.valor_pct - a.valor_pct);
 for (let i = 0; i < finalesSerie.length; i++) finalesSerie[i].y = i ? Math.min(finalesSerie[i].valor_pct, finalesSerie[i - 1].y - 8) : finalesSerie[i].valor_pct;
-const secFisc = html`<details class="fc-fiscalizacion">
+const secFisc = html`<details class="fc-fiscalizacion tarjeta">
   <summary>Detalle para fiscalización</summary>
   <div class="fc-fisc-cuerpo">
     ${serieObra.length ? Plot.plot({
@@ -285,11 +330,11 @@ const secFisc = html`<details class="fc-fiscalizacion">
 
 ```js
 display(html`<div class="ficha-c">
-  <div class="fc-arriba"><a class="fc-volver" href="./index.html">← Volver a la lista</a>${selector}</div>
+  <div class="fc-arriba"><a class="fc-volver" href="./index.html">← Todas las obras</a>${selector}</div>
   ${secCabeza}
   <div class="fc-columnas">
-    <div class="fc-col">${secSemanas}${secEtapas}${secContrato}</div>
-    <div class="fc-col">${secFotos}${secLimites}</div>
+    <div class="fc-principal">${secSemanas}${secFotos}${secEtapas}</div>
+    <aside class="fc-lateral" aria-label="Contrato y límites">${secContrato}${secLimites}</aside>
   </div>
   ${secReporte}
   ${secFisc}

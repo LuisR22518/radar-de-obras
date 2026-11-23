@@ -85,7 +85,7 @@ const sinDato = () => html`<span class="tenue">Sin dato</span>`;
 ```
 
 <div class="ficha-barra no-imprimir">
-  <a class="volver" href="./index.html">Volver a la lista</a>
+  <a class="volver" href="./contraloria.html">Volver a la lista de la Contraloría</a>
   <div class="ir">${selector}${html`<a class="boton secundario" href=${`./obra.html?id=${siguiente.obra_id}`}>Siguiente obra</a>`}</div>
 </div>
 
@@ -460,7 +460,7 @@ function descargar() {
   </dl>
   <h3>Decisión y seguimiento</h3>
   ${formDecision}
-  <p class="nota-tabla">Se guarda en este navegador. Las obras con una acción abierta aparecen en «Sus acciones abiertas», en la página de inicio.</p>
+  <p class="nota-tabla">Se guarda en este navegador. Las obras con una acción abierta aparecen en «Sus acciones abiertas», en la página Para la Contraloría.</p>
   <div class="lupia-acciones no-imprimir">
     ${html`<button class="boton" type="button" onclick=${descargar}>Descargar expediente</button>`}
     ${html`<button class="boton secundario" type="button" onclick=${() => window.print()}>Imprimir o guardar en PDF</button>`}
