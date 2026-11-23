@@ -190,7 +190,10 @@ export function leyendaObra() {
 }
 
 // Mapa de Costa Rica con un punto por obra; cada punto lleva el número de la lista.
-export function mapaObras(pais, obras, {width = 520, activo = null} = {}) {
+// Dónde va el nombre de cada provincia (el centro geométrico cae mal en las provincias alargadas)
+const ETIQUETA_PROVINCIA = {"Guanacaste": [-85.45, 10.45], "Puntarenas": [-83.6, 8.85], "Alajuela": [-84.45, 10.6], "Limón": [-83.25, 9.85],
+  "Heredia": [-84.05, 10.4], "San José": [-84.0, 9.55], "Cartago": [-83.7, 9.75]};
+export function mapaObras(pais, obras, {width = 520, activo = null, provincias = null} = {}) {
   const alto = Math.round(width * 0.9);
   const proy = d3.geoMercator().fitExtent([[16, 16], [width - 16, alto - 16]], pais);
   const camino = d3.geoPath(proy);
@@ -216,11 +219,17 @@ export function mapaObras(pais, obras, {width = 520, activo = null} = {}) {
     ${svg`<text x=${proy([-83.35, 10.95])[0]} y=${proy([-83.35, 10.95])[1]} class="mar">Mar Caribe</text>
     <text x=${proy([-85.55, 8.55])[0]} y=${proy([-85.55, 8.55])[1]} class="mar">Océano Pacífico</text>
     <path d=${camino(pais)} fill="var(--niebla)" stroke="var(--trazo)" stroke-width="1" stroke-linejoin="round"/>
+    ${provincias ? provincias.features.map((f) => svg`<path d=${camino(f)} class="provincia" />`) : ""}
+    ${provincias && width >= 380 ? provincias.features.map((f) => {
+      const [x, y] = proy(ETIQUETA_PROVINCIA[f.properties.nombre] ?? d3.geoCentroid(f));
+      return svg`<text x=${x} y=${y} class="nombre-provincia">${f.properties.nombre}</text>`;
+    }) : ""}
     ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="1" />
       <circle cx=${p.x0} cy=${p.y0} r="2" fill="var(--grafito)" />` : "")}
     ${puntos.map(({o, x, y}) => svg`<a href=${`./obra.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>
       <title>${`${o.orden}. ${o.nombre} (${o.canton}): ${ESTADO_OBRA[o.estado].label.toLowerCase()}`}</title>
-      ${iconoEstado(o.estado, o.orden, tam)}</a>`)}`}
+      ${iconoEstado(o.estado, o.orden, tam)}</a>`)}
+    ${width >= 420 ? puntos.map(({o, x, y}) => svg`<text x=${x + tam / 2 + 4} y=${y + 4} class=${`canton-pin${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} aria-hidden="true">${o.canton}</text>`) : ""}`}
   </svg>`;
 }
