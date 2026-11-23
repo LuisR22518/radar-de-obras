@@ -21,16 +21,15 @@ from . import config as C
 TABLAS = {
     "obras": [
         ("obra_id", "texto", True), ("nombre", "texto", True), ("tipo", "texto", True),
-        ("provincia", "texto", True), ("canton", "texto", True), ("lat", "numero", True), ("lon", "numero", True),
+        ("necesidad_publica", "texto", False), ("provincia", "texto", True), ("canton", "texto", True), ("lat", "numero", True), ("lon", "numero", True),
         ("institucion_ejecutora", "texto", True), ("contratista", "texto", False),
         ("monto_original_crc", "numero", False), ("fecha_inicio", "fecha", False), ("fecha_fin_original", "fecha", False),
         ("fuente_datos", "opcion:dIAra real|simulado", True),
-        ("escenario_simulado", "opcion:|" + "|".join(C.ESCENARIOS), False), ("escenario_desde", "fecha", False),
         ("estado_registro", "opcion:activa|archivada", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
     ],
-    "camaras": [
-        ("camara_id", "texto", True), ("obra_id", "texto", True), ("desde", "fecha", True), ("hasta", "fecha", False),
-        ("inventario_fotos", "opcion:si|no", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
+    "hitos": [
+        ("obra_id", "texto", True), ("hito", "texto", True), ("fecha_prevista", "fecha", True),
+        ("fecha_cumplido", "fecha", False), ("documento", "texto", False), ("actualizado_por", "texto", False),
     ],
     "eventos_contrato": [
         ("obra_id", "texto", True), ("fecha", "fecha", True),
@@ -50,14 +49,25 @@ TABLAS = {
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("tipo", "texto", True), ("descripcion", "texto", True),
         ("con_foto", "opcion:si|no", False), ("canal", "texto", False), ("actualizado_por", "texto", False),
     ],
+    # Configuración: se tocan poco
+    "camaras": [
+        ("camara_id", "texto", True), ("obra_id", "texto", True), ("desde", "fecha", True), ("hasta", "fecha", False),
+        ("inventario_fotos", "opcion:si|no", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
+    ],
     "feriados": [("fecha", "fecha", True), ("nombre", "texto", True), ("fuente", "texto", False),
                  ("actualizado_por", "texto", False)],
     "responsables": [("nombre", "texto", True), ("cargo", "texto", True),
                      ("rol", "opcion:gerencia|encargado_actualizacion", True), ("activo", "opcion:si|no", True), ("correo", "texto", False)],
+    # Solo para las obras de prueba: cómo se fabrican sus datos. No describe la obra.
+    "simulacion": [("obra_id", "texto", True), ("escenario", "opcion:" + "|".join(C.ESCENARIOS), True),
+                   ("desde", "fecha", False), ("actualizado_por", "texto", False)],
 }
+# Pestañas de configuración (se tocan poco): van al final de la hoja y con otro color
+CONFIGURACION = {"camaras", "feriados", "responsables", "simulacion"}
 # Quién puede cambiar cada tabla: la gerencia (cargos sobre el auditor) mantiene la estructura del registro;
 # los encargados de actualización de obra cargan el seguimiento. El auditor solo lee, desde LupIA.
 PERMISOS = {"obras": {"gerencia"}, "camaras": {"gerencia"}, "feriados": {"gerencia"}, "responsables": {"gerencia"},
+            "simulacion": {"gerencia"}, "hitos": {"gerencia", "encargado_actualizacion"},
             "eventos_contrato": {"gerencia", "encargado_actualizacion"},
             "avance_reportado": {"gerencia", "encargado_actualizacion"},
             "pagos": {"gerencia", "encargado_actualizacion"},
@@ -65,16 +75,18 @@ PERMISOS = {"obras": {"gerencia"}, "camaras": {"gerencia"}, "feriados": {"gerenc
 ROLES = {"gerencia": "Gerencia", "encargado_actualizacion": "Encargado de actualización de obra"}
 CLAVES = {"obras": ["obra_id"], "camaras": ["camara_id", "desde"], "eventos_contrato": ["obra_id", "fecha", "tipo"],
           "avance_reportado": ["obra_id", "fecha"], "pagos": ["obra_id", "fecha"],
-          "reportes_ciudadanos": ["obra_id", "fecha", "descripcion"], "feriados": ["fecha"], "responsables": ["nombre"]}
+          "reportes_ciudadanos": ["obra_id", "fecha", "descripcion"], "feriados": ["fecha"], "responsables": ["nombre"],
+          "hitos": ["obra_id", "hito"], "simulacion": ["obra_id"]}
 NOMBRES = {"obras": "Obras", "camaras": "Cámaras", "eventos_contrato": "Cambios de contrato",
            "avance_reportado": "Avance reportado", "pagos": "Pagos", "reportes_ciudadanos": "Reportes ciudadanos",
-           "feriados": "Feriados", "responsables": "Responsables"}
+           "feriados": "Feriados", "responsables": "Responsables", "hitos": "Hitos", "simulacion": "Simulación"}
 # Qué poner en cada columna (lo usan la pestaña LEEME de la hoja y la documentación)
 DESCRIPCIONES = {
     "obras": {
         "obra_id": "Código corto y único de la obra (por ejemplo, A o P). No se cambia una vez creado.",
         "nombre": "Nombre de la obra como lo verá el auditor.",
         "tipo": "Puente, Camino, Acueducto, Alcantarillado, Edificio educativo, Edificio de salud, etc.",
+        "necesidad_publica": "Para qué sirve la obra, en una frase que entienda cualquier vecino (por ejemplo, «Aulas nuevas para 300 estudiantes»).",
         "provincia": "Provincia donde está la obra.", "canton": "Cantón donde está la obra.",
         "lat": "Latitud en grados decimales (por ejemplo, 9.3745).", "lon": "Longitud en grados decimales (por ejemplo, -83.7037).",
         "institucion_ejecutora": "Institución que contrata y supervisa la obra.",
@@ -82,9 +94,7 @@ DESCRIPCIONES = {
         "monto_original_crc": "Monto original del contrato en colones, sin separadores. Vacío si no se conoce.",
         "fecha_inicio": "Fecha de la orden de inicio. Vacío si no se conoce.",
         "fecha_fin_original": "Fecha de fin según el contrato original. Las prórrogas van en cambios de contrato.",
-        "fuente_datos": "dIAra real, si la cámara es real; simulado, si es una obra de prueba.",
-        "escenario_simulado": "Solo obras simuladas: normal, paralizada, esporadica, lenta, falla_camara o terminada.",
-        "escenario_desde": "Solo para paralizada, falla_camara y terminada: desde qué fecha.",
+        "fuente_datos": "dIAra real, si la cámara es real; simulado, si es una obra de prueba (sus datos se fabrican según la pestaña simulacion).",
         "estado_registro": "activa: aparece en LupIA. archivada: se conserva pero no aparece.",
         "nota": "Comentario libre.",
     },
@@ -94,6 +104,12 @@ DESCRIPCIONES = {
         "desde": "Fecha de instalación en esta obra.", "hasta": "Fecha de retiro. Vacío si sigue instalada.",
         "inventario_fotos": "si, si la cámara informa cuántas fotos tomó cada día; no, si solo hay detecciones.",
         "nota": "Comentario libre.",
+    },
+    "hitos": {
+        "obra_id": "Código de la obra.", "hito": "Etapa de la obra, en pocas palabras (por ejemplo, «Cimientos» o «Techo»).",
+        "fecha_prevista": "Cuándo debía cumplirse, según el cronograma.",
+        "fecha_cumplido": "Cuándo se cumplió. Vacío si todavía no se cumple.",
+        "documento": "Cronograma o informe que lo respalda.",
     },
     "eventos_contrato": {
         "obra_id": "Código de la obra.", "fecha": "Fecha de aprobación del cambio.",
@@ -123,6 +139,9 @@ DESCRIPCIONES = {
                      "rol": "gerencia: crea y cambia obras, cámaras y feriados. encargado_actualizacion: carga avance, pagos, cambios de contrato y reportes.",
                      "activo": "si, mientras la persona tenga ese rol; no, cuando deje de tenerlo (no se borra, para conservar el historial).",
                      "correo": "Correo donde recibe los reportes de datos que hacen los auditores; de preferencia un buzón institucional. Vacío si no los recibe."},
+    "simulacion": {"obra_id": "Código de una obra con fuente_datos = simulado.",
+                   "escenario": "Cómo se comporta su cámara simulada: " + ", ".join(C.ESCENARIOS) + ".",
+                   "desde": "Solo para paralizada, falla_camara y terminada: desde qué fecha."},
 }
 for _tabla in DESCRIPCIONES:
     if _tabla != "responsables":
@@ -275,11 +294,10 @@ def _revisar(t: dict, problemas: list):
             problemas.append(Problema("error", "obras", f, "La ubicación (lat, lon) cae fuera de Costa Rica."))
         if pd.notna(o["fecha_inicio"]) and pd.notna(o["fecha_fin_original"]) and o["fecha_fin_original"] <= o["fecha_inicio"]:
             problemas.append(Problema("error", "obras", f, "La fecha de fin es anterior a la de inicio."))
-        if o["fuente_datos"] == "simulado" and not o["escenario_simulado"]:
-            problemas.append(Problema("error", "obras", f, "Una obra simulada necesita «escenario_simulado»."))
-        if o["escenario_simulado"] in ("paralizada", "falla_camara", "terminada") and pd.isna(o["escenario_desde"]):
-            problemas.append(Problema("error", "obras", f,
-                                      f"El escenario «{o['escenario_simulado']}» necesita «escenario_desde»."))
+        if o["fuente_datos"] == "simulado" and o["obra_id"] not in set(t["simulacion"]["obra_id"]):
+            problemas.append(Problema("error", "obras", f, f"La obra simulada {o['obra_id']} necesita su fila en la pestaña simulacion."))
+        if o["estado_registro"] == "activa" and not o["necesidad_publica"]:
+            problemas.append(Problema("aviso", "obras", f, f"Obra {o['obra_id']}: falta «necesidad_publica» (para qué sirve la obra)."))
         faltan = [c for c in ("monto_original_crc", "fecha_inicio", "fecha_fin_original", "contratista")
                   if pd.isna(o[c]) or o[c] == ""]
         if faltan and o["estado_registro"] == "activa":
@@ -291,6 +309,17 @@ def _revisar(t: dict, problemas: list):
                                       "Sin ellos no se calculan las señales del contrato."))
         if o["estado_registro"] == "activa" and o["obra_id"] not in set(camaras["obra_id"]):
             problemas.append(Problema("aviso", "obras", f, f"Obra {o['obra_id']}: no tiene cámara asignada."))
+    sim = t["simulacion"]
+    reales = set(obras.loc[obras["fuente_datos"] != "simulado", "obra_id"])
+    for i, s in sim.iterrows():
+        if s["obra_id"] in reales:
+            problemas.append(Problema("error", "simulacion", i + 2, f"La obra {s['obra_id']} no es simulada: quite esta fila."))
+        if s["escenario"] in ("paralizada", "falla_camara", "terminada") and pd.isna(s["desde"]):
+            problemas.append(Problema("error", "simulacion", i + 2, f"El escenario «{s['escenario']}» necesita «desde»."))
+    hoy = pd.Timestamp.now(tz="America/Costa_Rica").tz_localize(None).normalize()
+    for i, h in t["hitos"].iterrows():
+        if pd.notna(h["fecha_cumplido"]) and h["fecha_cumplido"] > hoy:
+            problemas.append(Problema("aviso", "hitos", i + 2, "«fecha_cumplido» está en el futuro."))
     # Una cámara no puede estar en dos obras a la vez
     for cam, g in camaras.groupby("camara_id"):
         g = g.sort_values("desde")
@@ -353,5 +382,9 @@ def cargar() -> Registro:
     """Registro listo para el cálculo: solo obras activas y tipos convertidos."""
     reg = validar(leer_crudo())
     obras = reg["obras"]
+    # El cálculo sigue usando escenario_simulado y escenario_desde por obra: se traen de la pestaña simulacion
+    sim = reg["simulacion"].rename(columns={"escenario": "escenario_simulado", "desde": "escenario_desde"})
+    obras = obras.merge(sim[["obra_id", "escenario_simulado", "escenario_desde"]], on="obra_id", how="left")
+    obras["escenario_simulado"] = obras["escenario_simulado"].fillna("")
     reg.tablas["obras"] = obras[obras["estado_registro"] == "activa"].set_index("obra_id", drop=False)
     return reg

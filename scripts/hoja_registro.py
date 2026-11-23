@@ -20,11 +20,12 @@ from openpyxl.worksheet.datavalidation import DataValidation
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from radar import registro as R  # noqa: E402
 
-TINTA, NIEBLA = "13263A", "F3F5F7"
+TINTA, NIEBLA, GRIS = "13263A", "F3F5F7", "9AA5B1"
 FILAS = 1000  # hasta dónde llegan las validaciones
 
 
-ANCHOS = {"obra_id": 9, "nombre": 30, "tipo": 20, "provincia": 13, "canton": 16, "lat": 10, "lon": 11,
+ANCHOS = {"obra_id": 9, "nombre": 30, "tipo": 20, "necesidad_publica": 50, "hito": 34, "fecha_prevista": 15,
+          "fecha_cumplido": 15, "escenario": 14, "provincia": 13, "canton": 16, "lat": 10, "lon": 11,
           "institucion_ejecutora": 30, "contratista": 18, "monto_original_crc": 18, "fecha_inicio": 13,
           "fecha_fin_original": 15, "fuente_datos": 13, "escenario_simulado": 17, "escenario_desde": 15,
           "estado_registro": 15, "nota": 45, "camara_id": 12, "desde": 12, "hasta": 12, "inventario_fotos": 15,
@@ -34,55 +35,48 @@ ANCHOS = {"obra_id": 9, "nombre": 30, "tipo": 20, "provincia": 13, "canton": 16,
           "rol": 24, "activo": 9, "correo": 34}
 FORMATOS = {"monto_original_crc": "#,##0", "monto_nuevo_crc": "#,##0", "pagado_acumulado_crc": "#,##0",
             "avance_reportado_pct": "0.0", "lat": "0.0000", "lon": "0.0000", "dias_prorroga": "0"}
-LARGOS = {"nombre", "institucion_ejecutora", "nota", "detalle", "documento", "descripcion", "canal", "fuente", "cargo"}
+LARGOS = {"necesidad_publica", "hito", "nombre", "institucion_ejecutora", "nota", "detalle", "documento", "descripcion", "canal", "fuente", "cargo"}
 BORDE = Side(style="thin", color="DCE1E5")
 
 
 def leeme(ws):
     ws.title = "LEEME"
+    dia = [t for t in R.TABLAS if t not in R.CONFIGURACION]
     filas = [
         ["LupIA · Registro de obras"],
-        ["Esta hoja es la base de datos propia de LupIA: lo que no viene de las cámaras de dIAra. Cada cambio que se haga aquí aparece en LupIA en unos 15 minutos."],
-        ["Si LupIA encuentra un error, no aplica el cambio: conserva la última versión buena y muestra qué corregir en su página Mantenimiento del registro."],
+        ["Aquí se cargan los datos de cada obra que no vienen de las cámaras de dIAra. Los cambios aparecen en LupIA en unos 15 minutos."],
+        ["Si un cambio tiene un error, LupIA no lo aplica: sigue con la última versión buena y explica qué corregir en su página Mantenimiento del registro."],
         [],
-        ["Quién hace qué"],
-        ["Rol", "Pestañas que mantiene", "Qué hace"],
-        ["Gerencia (cargos sobre el auditor)", "obras, camaras, feriados, responsables",
-         "Crea y cambia obras, asigna o retira cámaras, mantiene el calendario de feriados y define quién puede actualizar."],
-        ["Encargado de actualización de obra", "eventos_contrato, avance_reportado, pagos, reportes_ciudadanos",
-         "Carga lo que va pasando en cada obra: cambios de contrato, informes de avance, pagos y reportes ciudadanos."],
-        ["Auditor", "Ninguna (solo lee en LupIA)", "Revisa, prioriza y documenta sus hallazgos en LupIA. No edita esta hoja."],
+        ["Quién actualiza qué"],
+        ["Rol", "Pestañas", "Qué hace"],
+        ["Gerencia", "obras, camaras, feriados, responsables y simulacion",
+         "Agrega obras, asigna cámaras, mantiene los feriados y define quién puede actualizar."],
+        ["Encargado de actualización", ", ".join(t for t in dia if t != "obras"),
+         "Carga lo que va pasando en cada obra: etapas, cambios de contrato, avance, pagos y reportes ciudadanos."],
         [],
         ["Reglas"],
-        ["1. No cambie los nombres de las pestañas ni de las columnas (fila 1)."],
-        ["2. Una fila por registro, sin filas vacías en medio de los datos."],
-        ["3. En cada fila que cree o cambie, ponga su nombre en actualizado_por (tal como aparece en la pestaña responsables)."],
-        ["4. Fechas como fechas; montos en colones, sin símbolo; use las listas desplegables donde las haya."],
-        ["5. Cada cambio de contrato, informe o pago debe llevar su documento de respaldo."],
-        ["6. Para quitar una obra, cambie estado_registro a archivada; para quitar a un responsable, ponga activo = no. No borre filas: así se conserva el historial."],
-        ["7. Google guarda cada versión de esta hoja (Archivo > Historial de versiones), y LupIA anota cada cambio en su bitácora con el valor anterior."],
+        ["1. No cambie los nombres de las pestañas ni de la fila 1."],
+        ["2. Una fila por registro, sin filas vacías en medio. En cada fila que cree o cambie, elija su nombre en actualizado_por."],
+        ["3. Fechas como fechas; montos en colones, sin símbolo; use las listas desplegables donde las haya."],
+        ["4. No borre filas: para quitar una obra, ponga estado_registro = archivada; para quitar a un responsable, activo = no."],
         [],
-        ["Pestaña", "Columna", "Qué poner", "Obligatoria"],
+        ["¿Qué va en cada columna? Pase el mouse sobre el encabezado: cada columna tiene una nota que lo explica."],
+        ["Las pestañas grises (camaras, feriados, responsables y simulacion) son de configuración y casi nunca se tocan."],
+        ["Google guarda cada versión de esta hoja (Archivo > Historial de versiones) y LupIA anota cada cambio con su valor anterior."],
     ]
-    for tabla, cols in R.TABLAS.items():
-        for col, _tipo, oblig in cols:
-            filas.append([tabla, col, R.DESCRIPCIONES[tabla][col], "sí" if oblig else "no"])
     for f in filas:
         ws.append(f)
     ws["A1"].font = Font(bold=True, size=16, color=TINTA)
-    for celda in ("A5", "A11"):
+    for celda in ("A5", "A10"):
         ws[celda].font = Font(bold=True, size=12, color=TINTA)
-    for fila in (6, 20):
-        for c in ws[fila]:
-            c.font = Font(bold=True, color="FFFFFF")
-            c.fill = PatternFill("solid", fgColor=TINTA)
-    for col, ancho in zip("ABCD", (34, 40, 90, 12)):
+    for c in ws[6]:
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor=TINTA)
+    for col, ancho in zip("ABC", (28, 52, 80)):
         ws.column_dimensions[col].width = ancho
-    for fila in ws.iter_rows(min_row=6, max_row=9):
+    for fila in ws.iter_rows(min_row=6, max_row=8):
         for c in fila:
             c.alignment = Alignment(wrap_text=True, vertical="top")
-    for fila in ws.iter_rows(min_row=21):
-        fila[2].alignment = Alignment(wrap_text=True, vertical="top")
     ws.freeze_panes = "A2"
     ws.sheet_view.showGridLines = False
 
@@ -143,6 +137,7 @@ def pestana(wb, tabla: str, df: pd.DataFrame):
             continue
         dv.add(rango)
         ws.add_data_validation(dv)
+    ws.sheet_properties.tabColor = GRIS if tabla in R.CONFIGURACION else TINTA
     ws.row_dimensions[1].height = 24
     ws.freeze_panes = "B2" if tabla in ("obras", "camaras") else "A2"
     ws.auto_filter.ref = f"A1:{get_column_letter(len(cols))}{max(2, len(df) + 1)}"

@@ -10,7 +10,7 @@ LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalizac
 | --- | --- | --- | --- |
 | 1. dIAra | Detecciones de personas y máquinas por foto. Hoy: 8 días reales del piloto en la Escuela de Pococí (2024) | La Contraloría; nadie las edita a mano | `datos/diara/<cámara>/` |
 | 2. Simulado | Obras ficticias cuya cámara "ve" fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo | Se regenera en cada corrida (semilla fija) | `datos/simulados/` (no se guarda en el repositorio) |
-| 3. Registro de obras | Base de datos propia: obras, cámaras, contratos, avance, pagos, reportes ciudadanos y feriados | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza cada 15 minutos) |
+| 3. Registro de obras | Base de datos propia: obras, hitos, cámaras, contratos, avance, pagos, reportes ciudadanos, feriados y la simulación de las obras de prueba | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza cada 15 minutos) |
 
 El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; cada 15 minutos GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Mantenimiento del registro** dice qué corregir.
 
@@ -57,8 +57,8 @@ Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. 
 ```
 datos/
   diara/dIAra-K1/        datos reales del piloto de dIAra, sin modificar (ver FUENTE.md)
-  registro/              copia de la hoja del registro: obras, camaras, eventos_contrato,
-                         avance_reportado, pagos, reportes_ciudadanos, feriados y bitacora
+  registro/              copia de la hoja del registro: obras, hitos, camaras, eventos_contrato,
+                         avance_reportado, pagos, reportes_ciudadanos, feriados, simulacion y bitacora
   simulados/             generados por scripts/generar_simulados.py (no se guardan en git)
 radar/
   config.py              todos los parámetros y umbrales en un solo lugar

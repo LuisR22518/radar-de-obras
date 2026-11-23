@@ -12,7 +12,7 @@ const resumen = await FileAttachment("data/resumen.json").json();
 
 const GERENCIA = "Gerencia";
 const ENCARGADO = "Encargado de actualización de obra";
-const DE_GERENCIA = new Set(["Obras", "Cámaras", "Feriados", "Responsables"]);
+const DE_GERENCIA = new Set(["Obras", "Cámaras", "Feriados", "Responsables", "Simulación"]);
 const receptores = responsables.filter((d) => d.activo === "si" && d.correo);
 const SIN_RECEPTOR = "Los reportes de datos que hacen los auditores no tienen a quién llegar.";
 const hace = (n) => (n === 0 ? "hoy" : `hace ${plural(n, "día", "días")}`);
@@ -118,8 +118,8 @@ function personas(rol) {
 }
 function tablaRoles() {
   const filas = [
-    [GERENCIA, "Obras, cámaras, feriados y responsables. Decide qué obras se vigilan y avisa al equipo de dIAra cuando una cámara deja de enviar fotos.", personas(GERENCIA)],
-    [ENCARGADO, "Cambios de contrato, avance reportado, pagos y reportes ciudadanos, cada fila con el documento que la respalda.", personas(ENCARGADO)],
+    [GERENCIA, "Obras, cámaras, feriados, responsables y la simulación de las obras de prueba. Decide qué obras se vigilan y avisa al equipo de dIAra cuando una cámara deja de enviar fotos.", personas(GERENCIA)],
+    [ENCARGADO, "Etapas de la obra (hitos), cambios de contrato, avance reportado, pagos y reportes ciudadanos, cada fila con el documento que la respalda.", personas(ENCARGADO)],
     ["Equipo de dIAra", "Repara las cámaras. No edita la hoja.", "—"],
     ["Auditor", "Consulta LupIA. No edita la hoja: si un dato no cuadra, lo reporta desde la ficha de la obra y el reporte llega por correo a las personas con correo registrado.", "—"]
   ];
@@ -152,9 +152,9 @@ ${tablaBitacora()}
 
 ## Cómo agregar o cambiar una obra
 
-1. **Gerencia:** agregue la obra en la pestaña **obras**. Si es una obra de prueba, ponga `simulado` en *fuente_datos* y elija un escenario.
+1. **Gerencia:** agregue la obra en la pestaña **obras**, con una frase sobre para qué sirve en *necesidad_publica*. Si es una obra de prueba, ponga `simulado` en *fuente_datos* y elija su escenario en la pestaña **simulacion**.
 2. **Gerencia:** asígnele una cámara en la pestaña **camaras**, con la fecha desde la que está instalada.
-3. **Encargado de actualización:** registre los cambios de contrato, el avance reportado, los pagos y los reportes ciudadanos, cada uno en su pestaña y con su documento de respaldo.
+3. **Encargado de actualización:** registre las etapas de la obra en la pestaña **hitos** (fecha prevista y, cuando se cumpla, la fecha en que se cumplió), los cambios de contrato, el avance reportado, los pagos y los reportes ciudadanos, cada uno en su pestaña y con su documento de respaldo.
 4. En cada fila, ponga su nombre en *actualizado_por*.
 5. Espere unos 15 minutos. LupIA lee la hoja, revisa los datos y, si no hay errores, actualiza la lista, el mapa y la ficha de la obra. Si hay errores, aparecen arriba en «Por hacer» y no se aplica nada hasta corregirlos.
 
