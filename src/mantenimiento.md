@@ -59,8 +59,8 @@ function estadoGeneral() {
 
 ${estadoGeneral()}
 
-<p>${resumen.registro_hoja ? html`<a class="boton" href=${resumen.registro_hoja} target="_blank" rel="noopener">Abrir el registro</a>` : ""}</p>
-<p class="tenue">${resumen.registro_actualizado ? `Último cambio aplicado: ${hora(resumen.registro_actualizado)}. ` : ""}Los cambios de la hoja aparecen en LupIA unos 15 minutos después.</p>
+<p class="lupia-acciones">${resumen.registro_hoja ? html`<a class="boton" href=${resumen.registro_hoja} target="_blank" rel="noopener">Abrir el registro</a>` : ""}<a class="boton secundario" href="https://github.com/LuisR22518/radar-de-obras/actions/workflows/publicar.yml" target="_blank" rel="noopener">Publicar ahora ↗</a></p>
+<p class="tenue">${resumen.registro_actualizado ? `Último cambio aplicado: ${hora(resumen.registro_actualizado)}. ` : ""}LupIA revisa la hoja sola varias veces al día, pero GitHub decide cuándo, y a veces pasan horas. Si necesita ver un cambio ya (por ejemplo, antes de una presentación), use «Publicar ahora»: en GitHub toque «Run workflow» y luego el botón verde. En unos 4 minutos el cambio aparece en LupIA. Necesita una cuenta de GitHub con permiso en el repositorio.</p>
 
 <dl class="datos-clave">
   <div><dt>Obras al día</dt><dd>${alDia} de ${mantenimiento.length}<small>Informes, pagos, cámara y contrato</small></dd></div>
@@ -156,7 +156,7 @@ ${tablaBitacora()}
 2. **Gerencia:** asígnele una cámara en la pestaña **camaras**, con la fecha desde la que está instalada.
 3. **Encargado de actualización:** registre las etapas de la obra en la pestaña **hitos** (fecha prevista y, cuando se cumpla, la fecha en que se cumplió), los cambios de contrato, el avance reportado, los pagos y los reportes ciudadanos, cada uno en su pestaña y con su documento de respaldo.
 4. En cada fila, ponga su nombre en *actualizado_por*.
-5. Espere unos 15 minutos. LupIA lee la hoja, revisa los datos y, si no hay errores, actualiza la lista, el mapa y la ficha de la obra. Si hay errores, aparecen arriba en «Por hacer» y no se aplica nada hasta corregirlos.
+5. Toque «Publicar ahora» (arriba en esta página) o espere a la revisión automática, que GitHub hace varias veces al día. LupIA lee la hoja, revisa los datos y, si no hay errores, actualiza la lista, el mapa y la ficha de la obra. Si hay errores, aparecen arriba en «Por hacer» y no se aplica nada hasta corregirlos.
 
 Para conectar una cámara real de dIAra no hay que cambiar código: se copian sus archivos diarios a `datos/diara/<cámara>/` en el repositorio y se registra la cámara en la pestaña **camaras**.
 

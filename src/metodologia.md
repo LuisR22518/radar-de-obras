@@ -49,7 +49,7 @@ LupIA trabaja con tres capas. El auditor solo lee; los datos los mantiene quien 
 | Registro de obras | Obras, cámaras, contratos, avance, pagos, reportes y feriados | La gerencia y los encargados de actualización de obra, en una hoja de Google | Obras ficticias y seudonimizadas; feriados reales |
 | Contexto | Lluvia diaria | Automático (Open-Meteo) | ${(([s]) => s.charAt(0).toUpperCase() + s.slice(1))([resumen.origen_clima.join(", ")])} |
 
-Cada 15 minutos, LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Qué cargos cumplen esos roles dentro de la Contraloría está por confirmar con la institución.
+Varias veces al día (o al momento, con «Publicar ahora» en Mantenimiento), LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Qué cargos cumplen esos roles dentro de la Contraloría está por confirmar con la institución.
 
 ## Límites
 

@@ -875,3 +875,8 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 @media (min-width: 641px) { .fc-arriba form label { position: static !important; width: auto !important; height: auto !important; overflow: visible !important; clip: auto !important; margin: 0 0.5rem 0 0 !important; } }
 .fc-hero { margin-bottom: 1rem; }
 @media (max-width: 640px) { .lectura table { display: block; overflow-x: auto; } }
+/* Sin círculos de carga a medio llenar: el contenido aparece cuando está listo */
+observablehq-loading { visibility: hidden; }
+/* Accesibilidad (revisión con axe, WCAG 2 AA): enlaces subrayados dentro del texto y pies de foto con buen contraste */
+.portada-nota a, .como-mas a, .aviso a, .fc-credito a, .nota-tabla a, .tenue a { text-decoration: underline; }
+figcaption, .fc-foto figcaption { color: var(--grafito); }

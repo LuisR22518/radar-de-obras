@@ -10,9 +10,9 @@ LupIA (lupa + IA) es un prototipo de visualización para priorizar la fiscalizac
 | --- | --- | --- | --- |
 | 1. dIAra | Detecciones de personas y máquinas por foto. Hoy: 8 días reales del piloto en la Escuela de Pococí (2024) | La Contraloría; nadie las edita a mano | `datos/diara/<cámara>/` |
 | 2. Simulado | Obras ficticias cuya cámara "ve" fotos reales del piloto recombinadas por hora, con la sensibilidad del modelo | Se regenera en cada corrida (semilla fija) | `datos/simulados/` (no se guarda en el repositorio) |
-| 3. Registro de obras | Base de datos propia: obras, hitos, cámaras, contratos, avance, pagos, reportes ciudadanos, feriados y la simulación de las obras de prueba | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza cada 15 minutos) |
+| 3. Registro de obras | Base de datos propia: obras, hitos, cámaras, contratos, avance, pagos, reportes ciudadanos, feriados y la simulación de las obras de prueba | La gerencia y los encargados de actualización de obra, en una [hoja de Google](https://docs.google.com/spreadsheets/d/1JKpAcmlTYHDmC1i9EuHFKIsWvBkFza8MNm9PfhiWP4Q/edit) | `datos/registro/` (copia que GitHub actualiza varias veces al día) |
 
-El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; cada 15 minutos GitHub la descarga, revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Mantenimiento del registro** dice qué corregir.
+El auditor solo lee. La gerencia y los encargados de actualización editan la hoja; GitHub la descarga varias veces al día (se pide cada 15 minutos, pero GitHub decide cuándo; para publicar al momento: Actions → «Recalcular y publicar LupIA» → Run workflow), revisa su calidad y, si no hay errores, guarda los cambios con su bitácora (quién, cuándo, antes y después), recalcula y publica. Si la hoja trae errores, se conserva la última versión buena y la página **Mantenimiento del registro** dice qué corregir.
 
 Para conectar datos nuevos de dIAra no hay que cambiar código: se copia la carpeta de la cámara en `datos/diara/` (el adaptador `radar/diara.py` reconoce el CSV de producción y las etiquetas del piloto) y se registra la cámara en la hoja.
 
@@ -51,7 +51,7 @@ En Windows, si `python` no funciona, prueba con `py`.
 
 1. Crea un repositorio en GitHub y sube esta carpeta completa.
 2. En el repositorio, ve a **Settings → Pages** y en **Source** elige **GitHub Actions**.
-3. Cada vez que subas cambios a `main`, y cada 15 minutos, el flujo `.github/workflows/publicar.yml` lee la hoja del registro, recalcula los datos, corre las pruebas y publica el sitio. Si una prueba de calidad falla, no se publica.
+3. Cada vez que subas cambios a `main`, y varias veces al día, el flujo `.github/workflows/publicar.yml` lee la hoja del registro, recalcula los datos, corre las pruebas y publica el sitio. Si una prueba de calidad falla, no se publica.
 
 Con la cuenta gratuita, GitHub Pages solo publica desde repositorios públicos. Con GitHub Pro, gratis para estudiantes con el Student Developer Pack, el código puede quedar privado y el sitio seguir siendo visible.
 
