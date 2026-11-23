@@ -772,3 +772,12 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 .fc-fiscalizacion { margin: 1rem 0 2rem; padding: 0.9rem 1.3rem; }
 .fc-fiscalizacion summary { cursor: pointer; font-weight: 700; margin: 0; }
 .fc-fisc-cuerpo { margin-top: 0.9rem; }
+
+/* Ajustes después de revisar en pantalla */
+#observablehq-header ~ #observablehq-main, #observablehq-main { margin-top: 0 !important; }
+.fc-etapas li, .fc-dias li, .fc-datos li, .obras-lista li { max-width: none; }
+.fc-reportar form { display: flex !important; flex-direction: column; align-items: stretch; gap: 0.35rem; width: 100% !important; max-width: none !important; --input-width: 100%; }
+.fc-reportar form label { width: auto !important; font-weight: 650; font-size: var(--t-sm); padding: 0; }
+.fc-reportar form > div, .fc-reportar textarea { width: 100% !important; max-width: none !important; box-sizing: border-box; }
+.fc-reportar textarea { font: inherit; font-size: 1rem; padding: 0.65rem 0.8rem; border-radius: 10px; border: 1px solid var(--borde-control); min-height: 5.5rem; }
+.fc-reportar .fc-tenue { font-size: var(--t-sm); }

@@ -107,7 +107,7 @@ display(html`<div class="inicio-cuerpo" id="obras">
     ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 520), activo}))}
     ${leyendaObra()}
     <p class="mapa-nota">En cada tarjeta, un cuadro por semana:</p>
-    ${leyendaEstados(["actividad", "sin_actividad", "sin_datos"])}
+    ${leyendaEstados(["actividad", "sin_actividad", "sin_datos", "terminada"])}
   </aside>
   <div class="caja-lista">${listaObras()}</div>
 </div>`);
