@@ -86,7 +86,7 @@ ESCENARIOS = ["normal", "paralizada", "esporadica", "lenta", "falla_camara", "te
 
 # Canal oficial al que la ficha ciudadana envía los reportes (no se guardan en LupIA)
 CANAL_DENUNCIAS = {
-    "nombre": "Denuncia electrónica de la Contraloría General de la República",
-    "url": "https://www.cgr.go.cr/",
+    "nombre": "Denuncia Digital de la Contraloría General de la República",
+    "url": "https://www.cgr.go.cr/05-tramites-dd.html",  # página oficial de Denuncia Digital (revisada el 22 nov 2026)
     "telefono": "2501-8000",
 }

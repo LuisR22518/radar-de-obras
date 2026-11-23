@@ -237,7 +237,7 @@ const secReporte = html`<section class="fc-bloque fc-reportar" id="reportar">
   <p>LupIA no recibe denuncias: le arma el reporte con la evidencia para que lo envíe por el canal oficial de la Contraloría. Así su reporte llega con fechas y datos, no solo con lo que vio.</p>
   ${queVio}
   ${textoReporte}
-  <div class="fc-acciones">${copiar}<a class="fc-boton fc-secundario" href=${canal.url} target="_blank" rel="noopener">Ir al canal de denuncias de la Contraloría ↗</a></div>
+  <div class="fc-acciones">${copiar}<a class="fc-boton fc-secundario" href=${canal.url} target="_blank" rel="noopener">Ir a Denuncia Digital de la CGR ↗</a></div>
   <p class="fc-tenue">También puede llamar al ${canal.telefono}. Sus datos personales los maneja la Contraloría, no LupIA.</p>
 </section>`;
 ```
