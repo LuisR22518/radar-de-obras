@@ -27,6 +27,11 @@ TABLAS = {
         ("fuente_datos", "opcion:dIAra real|simulado", True),
         ("estado_registro", "opcion:activa|archivada", True), ("nota", "texto", False), ("actualizado_por", "texto", False),
     ],
+    "fotos": [
+        ("obra_id", "texto", True), ("fecha", "fecha", True), ("enlace", "texto", True),
+        ("fuente", "opcion:referencia externa|camara dIAra", True), ("autor", "texto", False),
+        ("licencia", "texto", False), ("descripcion", "texto", False), ("actualizado_por", "texto", False),
+    ],
     "hitos": [
         ("obra_id", "texto", True), ("hito", "texto", True), ("fecha_prevista", "fecha", True),
         ("fecha_cumplido", "fecha", False), ("documento", "texto", False), ("actualizado_por", "texto", False),
@@ -65,6 +70,7 @@ TABLAS = {
 # Qué parte de la ficha de la obra usa cada pestaña (lo muestra la pestaña LEEME de la hoja)
 ALIMENTA = {
     "obras": "Qué obra es, dónde está y para qué sirve",
+    "fotos": "Comparar dos fotos (fotos de referencia de las obras de prueba)",
     "hitos": "Etapas de la obra: cumplidas, pendientes y atrasadas",
     "avance_reportado": "Lo que reporta la ejecutora (avance en %)",
     "eventos_contrato": "Costo, fecha de entrega y cambios al contrato",
@@ -81,6 +87,7 @@ CONFIGURACION = {"camaras", "feriados", "responsables", "simulacion"}
 # los encargados de actualización de obra cargan el seguimiento. El auditor solo lee, desde LupIA.
 PERMISOS = {"obras": {"gerencia"}, "camaras": {"gerencia"}, "feriados": {"gerencia"}, "responsables": {"gerencia"},
             "simulacion": {"gerencia"}, "hitos": {"gerencia", "encargado_actualizacion"},
+            "fotos": {"gerencia", "encargado_actualizacion"},
             "eventos_contrato": {"gerencia", "encargado_actualizacion"},
             "avance_reportado": {"gerencia", "encargado_actualizacion"},
             "pagos": {"gerencia", "encargado_actualizacion"},
@@ -89,10 +96,10 @@ ROLES = {"gerencia": "Gerencia", "encargado_actualizacion": "Encargado de actual
 CLAVES = {"obras": ["obra_id"], "camaras": ["camara_id", "desde"], "eventos_contrato": ["obra_id", "fecha", "tipo"],
           "avance_reportado": ["obra_id", "fecha"], "pagos": ["obra_id", "fecha"],
           "reportes_ciudadanos": ["obra_id", "fecha", "descripcion"], "feriados": ["fecha"], "responsables": ["nombre"],
-          "hitos": ["obra_id", "hito"], "simulacion": ["obra_id"]}
+          "hitos": ["obra_id", "hito"], "simulacion": ["obra_id"], "fotos": ["obra_id", "enlace"]}
 NOMBRES = {"obras": "Obras", "camaras": "Cámaras", "eventos_contrato": "Cambios de contrato",
            "avance_reportado": "Avance reportado", "pagos": "Pagos", "reportes_ciudadanos": "Reportes ciudadanos",
-           "feriados": "Feriados", "responsables": "Responsables", "hitos": "Hitos", "simulacion": "Simulación"}
+           "feriados": "Feriados", "responsables": "Responsables", "hitos": "Hitos", "simulacion": "Simulación", "fotos": "Fotos"}
 # Qué poner en cada columna (lo usan la pestaña LEEME de la hoja y la documentación)
 DESCRIPCIONES = {
     "obras": {
@@ -117,6 +124,13 @@ DESCRIPCIONES = {
         "desde": "Fecha de instalación en esta obra.", "hasta": "Fecha de retiro. Vacío si sigue instalada.",
         "inventario_fotos": "si, si la cámara informa cuántas fotos tomó cada día; no, si solo hay detecciones.",
         "nota": "Comentario libre.",
+    },
+    "fotos": {
+        "obra_id": "Código de la obra.", "fecha": "Fecha de la foto (o la fecha que representa en la obra de prueba).",
+        "enlace": "Dirección https de la imagen (por ejemplo, de Wikimedia Commons).",
+        "fuente": "referencia externa: foto de otra obra, solo de ejemplo. camara dIAra: foto de la cámara de esta obra.",
+        "autor": "Autor de la foto, para citarlo.", "licencia": "Licencia de uso (por ejemplo, CC BY-SA 4.0).",
+        "descripcion": "Qué se ve en la foto, en pocas palabras (sirve como texto alternativo).",
     },
     "hitos": {
         "obra_id": "Código de la obra.", "hito": "Etapa de la obra, en pocas palabras (por ejemplo, «Cimientos» o «Techo»).",
@@ -334,6 +348,9 @@ def _revisar(t: dict, problemas: list):
             problemas.append(Problema("error", "simulacion", i + 2, f"La obra {s['obra_id']} no es simulada: quite esta fila."))
         if s["escenario"] in ("paralizada", "falla_camara", "terminada") and pd.isna(s["desde"]):
             problemas.append(Problema("error", "simulacion", i + 2, f"El escenario «{s['escenario']}» necesita «desde»."))
+    for i, f in t["fotos"].iterrows():
+        if f["enlace"] and not str(f["enlace"]).startswith("https://"):
+            problemas.append(Problema("error", "fotos", i + 2, "«enlace» debe empezar con https://."))
     hoy = pd.Timestamp.now(tz="America/Costa_Rica").tz_localize(None).normalize()
     for i, h in t["hitos"].iterrows():
         if pd.notna(h["fecha_cumplido"]) and h["fecha_cumplido"] > hoy:

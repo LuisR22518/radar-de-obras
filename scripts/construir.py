@@ -167,6 +167,7 @@ def calcular() -> dict:
     res["origen_clima"] = sorted(clima["origen"].unique().tolist())
     res["vence_informe_dias"], res["vence_pago_dias"] = C.VENCE_INFORME_DIAS, C.VENCE_PAGO_DIAS
     res["dias_sin_datos_camara"] = C.DIAS_SIN_DATOS_DISPOSITIVO
+    res["canal_denuncias"] = C.CANAL_DENUNCIAS
     leer = lambda nombre: (C.REGISTRO / nombre).read_text(encoding="utf-8") if (C.REGISTRO / nombre).exists() else ""  # noqa: E731
     res["registro_actualizado"] = leer("actualizado.txt").strip()
     res["registro_hoja"] = json.loads(leer("fuente.json")).get("url", "") if leer("fuente.json") else ""
@@ -186,6 +187,7 @@ def calcular() -> dict:
         "evidencia": evidencia(diario, inventario, lectura), "fuentes": fuentes(obras, camaras, lectura),
         "mantenimiento": mantenimiento(obras, sen, avance, pagos),
         "calidad": calidad, "bitacora": bitacora, "responsables": responsables, "resumen": res,
+        "hitos": reg["hitos"][reg["hitos"]["obra_id"].isin(obras.index)], "fotos": reg["fotos"][reg["fotos"]["obra_id"].isin(obras.index)],
     }
 
 

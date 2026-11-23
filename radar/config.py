@@ -83,3 +83,10 @@ SEMILLA = 2026  # misma semilla = mismos datos simulados en cualquier computador
 
 # --- Generador a partir del piloto -----------------------------------------------------------
 ESCENARIOS = ["normal", "paralizada", "esporadica", "lenta", "falla_camara", "terminada"]
+
+# Canal oficial al que la ficha ciudadana envía los reportes (no se guardan en LupIA)
+CANAL_DENUNCIAS = {
+    "nombre": "Denuncia electrónica de la Contraloría General de la República",
+    "url": "https://www.cgr.go.cr/",
+    "telefono": "2501-8000",
+}

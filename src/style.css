@@ -456,3 +456,76 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
 .reportar form { margin: 1rem 0; }
 .reportar textarea, .reportar input[type="text"] { width: 100%; }
 .reportar textarea, .reportar input[type="text"], .reportar select { font: inherit; font-size: 1rem; padding: 0.45rem 0.6rem; box-sizing: border-box; }
+
+/* --- Ficha ciudadana de la obra (ficha.md): primero celular, dos columnas en pantallas anchas --- */
+.ficha-c { max-width: 1080px; margin: 0 auto; }
+.ficha-c h1 { font-size: 1.6rem; margin: 0.35rem 0 0.1rem; max-width: none; }
+.ficha-c h2 { font-size: 1.05rem; margin: 0 0 0.6rem; }
+.ficha-c p { max-width: none; }
+.fc-arriba { margin-bottom: 0.75rem; }
+.fc-arriba form { width: 100%; max-width: 420px; }
+.fc-cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.fc-lugar { margin: 0; color: var(--grafito); }
+.fc-sirve { margin: 0.4rem 0 0; }
+.fc-etiqueta { display: inline-block; font-size: 0.8rem; padding: 0.1rem 0.6rem; border-radius: 4px; background: var(--resaltador); color: var(--tinta); }
+.fc-etiqueta.fc-real { background: var(--niebla); }
+.fc-tenue { color: var(--grafito); }
+.fc-respuesta { margin: 1rem 0; padding: 0.9rem 1rem; border: 1.5px solid var(--tinta); border-radius: 8px; }
+.fc-frase { font-size: 1.15rem; font-weight: 600; margin: 0; }
+.fc-confianza { margin: 0.25rem 0 0; color: var(--grafito); }
+.fc-columnas { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 2rem; }
+.fc-bloque { padding: 1rem 0; border-top: 1px solid var(--linea); }
+.fc-boton { display: inline-block; padding: 0.55rem 1rem; border: 1.5px solid var(--tinta); border-radius: 8px; background: var(--tinta); color: var(--papel) !important; font-weight: 600; text-decoration: none; cursor: pointer; font: inherit; }
+.fc-boton.fc-secundario { background: transparent; color: var(--tinta) !important; }
+.fc-boton:focus-visible, .fc-semana:focus-visible { outline: 3px solid var(--resaltador); outline-offset: 2px; }
+.fc-boton-arriba { display: none; }
+/* Semanas: la forma distingue el estado, no solo el color */
+.fc-semanas { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.fc-semana { height: 44px; min-width: 24px; border-radius: 6px; border: 1.5px solid var(--tinta); padding: 0; cursor: pointer; }
+.fc-semana[aria-pressed="true"] { outline: 3px solid var(--resaltador); outline-offset: 2px; }
+.fc-actividad { background: var(--tinta); }
+.fc-sin_actividad { background: var(--papel); }
+.fc-sin_datos { background: repeating-linear-gradient(45deg, var(--papel) 0 4px, var(--trazo) 4px 5px); border-style: dashed; }
+.fc-terminada { background: var(--niebla); border-color: var(--trazo); }
+.fc-fechas { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--grafito); margin-top: 0.25rem; }
+.fc-leyenda { font-size: 0.85rem; color: var(--grafito); display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; margin: 0.5rem 0 0; }
+.fc-m { display: inline-block; width: 14px; height: 14px; border: 1.5px solid var(--tinta); border-radius: 3px; vertical-align: -2px; }
+.fc-detalle { margin-top: 0.6rem; font-size: 0.9rem; }
+.fc-detalle-titulo { font-weight: 600; margin: 0 0 0.3rem; }
+.fc-dias { list-style: none; padding: 0; margin: 0; }
+.fc-dias li { padding: 0.15rem 0; border-bottom: 1px dotted var(--linea); }
+.fc-dias li span { display: inline-block; min-width: 5.5rem; color: var(--grafito); }
+.fc-etapas { list-style: none; padding: 0; margin: 0; }
+.fc-etapas li { display: flex; gap: 0.6rem; padding: 0.3rem 0; }
+.fc-icono { flex: 0 0 1.5rem; height: 1.5rem; border: 1.5px solid var(--tinta); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; }
+.fc-etapa-cumplida .fc-icono { background: var(--tinta); color: var(--papel); }
+.fc-etapa-atrasada .fc-icono { background: var(--resaltador); }
+.fc-etapa-pendiente { color: var(--grafito); }
+.fc-datos { margin: 0; }
+.fc-datos div { padding: 0.35rem 0; border-bottom: 1px dotted var(--linea); }
+.fc-datos dt { font-size: 0.85rem; color: var(--grafito); }
+.fc-datos dd { margin: 0; }
+.fc-datos ul { margin: 0; padding-left: 1.1rem; }
+.fc-elegir { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.fc-elegir form { width: 100%; }
+.fc-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+.fc-foto { margin: 0; }
+.fc-foto img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; border: 1px solid var(--linea); display: block; }
+.fc-foto figcaption { font-size: 0.8rem; margin-top: 0.2rem; }
+.fc-foto-vacia div { aspect-ratio: 4 / 3; border: 1px dashed var(--trazo); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--grafito); }
+.fc-aviso { font-size: 0.85rem; color: var(--grafito); margin: 0.4rem 0 0; }
+.fc-limites { background: var(--niebla); border-top: none; border-radius: 8px; padding: 0.9rem 1rem; margin: 1rem 0; }
+.fc-limites p { margin: 0.2rem 0; }
+.fc-reportar textarea { width: 100%; }
+.fc-reportar form { width: 100%; max-width: none; }
+.fc-texto-reporte { white-space: pre-wrap; font-size: 0.85rem; background: var(--niebla); padding: 0.75rem; border-radius: 6px; margin: 0.6rem 0; }
+.fc-acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.fc-fiscalizacion { margin: 1rem 0 2rem; border: 1px dashed var(--trazo); border-radius: 8px; padding: 0.6rem 1rem; }
+.fc-fiscalizacion summary { cursor: pointer; font-weight: 600; }
+.fc-fisc-cuerpo { margin-top: 0.75rem; }
+@media (min-width: 900px) {
+  .fc-columnas { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .fc-boton-arriba { display: block; flex: none; }
+  .fc-semana { height: 52px; }
+  .fc-foto img { aspect-ratio: 4 / 3; }
+}
