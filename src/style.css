@@ -220,7 +220,7 @@ form select, form input[type="number"], form textarea, form input[type="text"] {
 .mapa { display: block; max-width: 100%; height: auto; overflow: visible; }
 .mapa .mar { font-size: 12px; font-style: italic; fill: var(--trazo); text-anchor: middle; }
 .mapa .provincia { fill: none; stroke: var(--papel); stroke-width: 1.5; stroke-linejoin: round; }
-.mapa .nombre-provincia { font-size: 11px; fill: var(--grafito); text-anchor: middle; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.75; pointer-events: none; }
+.mapa .nombre-provincia { font-size: 10px; fill: var(--grafito); text-anchor: middle; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.55; pointer-events: none; }
 .mapa .canton-pin { font-size: 12px; font-weight: 600; fill: var(--tinta); paint-order: stroke; stroke: var(--papel); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
 .mapa .canton-pin.atenuado { opacity: 0.2; }
 .mapa .pin { cursor: pointer; transition: opacity 0.15s; }

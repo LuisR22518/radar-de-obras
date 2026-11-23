@@ -193,6 +193,24 @@ export function leyendaObra() {
 // Dónde va el nombre de cada provincia (el centro geométrico cae mal en las provincias alargadas)
 const ETIQUETA_PROVINCIA = {"Guanacaste": [-85.45, 10.45], "Puntarenas": [-83.6, 8.85], "Alajuela": [-84.45, 10.6], "Limón": [-83.25, 9.85],
   "Heredia": [-84.05, 10.4], "San José": [-84.0, 9.55], "Cartago": [-83.7, 9.75]};
+// Coloca el nombre del cantón junto a cada punto sin tapar otros puntos ni otros nombres:
+// prueba a la derecha, a la izquierda, abajo y arriba, empezando por las obras más urgentes.
+function etiquetasCanton(puntos, tam) {
+  const cajas = puntos.map(({x, y}) => [x - tam / 2, y - tam / 2, x + tam / 2, y + tam / 2]);
+  const choca = (c) => cajas.some((b) => c[0] < b[2] && c[2] > b[0] && c[1] < b[3] && c[3] > b[1]);
+  return [...puntos].sort((a, b) => a.o.orden - b.o.orden).map((p) => {
+    const ancho = p.o.canton.length * 6.6 + 4, alto = 14, r = tam / 2 + 4;
+    const opciones = [
+      {x: p.x + r, y: p.y + 4, anchor: "start", caja: [p.x + r, p.y - 8, p.x + r + ancho, p.y + 6]},
+      {x: p.x - r, y: p.y + 4, anchor: "end", caja: [p.x - r - ancho, p.y - 8, p.x - r, p.y + 6]},
+      {x: p.x, y: p.y + r + 10, anchor: "middle", caja: [p.x - ancho / 2, p.y + r - 2, p.x + ancho / 2, p.y + r + alto]},
+      {x: p.x, y: p.y - r - 2, anchor: "middle", caja: [p.x - ancho / 2, p.y - r - alto, p.x + ancho / 2, p.y - r + 2]}
+    ];
+    const elegida = opciones.find((op) => !choca(op.caja)) ?? opciones[0];
+    cajas.push(elegida.caja);
+    return {o: p.o, ...elegida};
+  });
+}
 export function mapaObras(pais, obras, {width = 520, activo = null, provincias = null} = {}) {
   const alto = Math.round(width * 0.9);
   const proy = d3.geoMercator().fitExtent([[16, 16], [width - 16, alto - 16]], pais);
@@ -230,6 +248,6 @@ export function mapaObras(pais, obras, {width = 520, activo = null, provincias =
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>
       <title>${`${o.orden}. ${o.nombre} (${o.canton}): ${ESTADO_OBRA[o.estado].label.toLowerCase()}`}</title>
       ${iconoEstado(o.estado, o.orden, tam)}</a>`)}
-    ${width >= 420 ? puntos.map(({o, x, y}) => svg`<text x=${x + tam / 2 + 4} y=${y + 4} class=${`canton-pin${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} aria-hidden="true">${o.canton}</text>`) : ""}`}
+    ${width >= 420 ? etiquetasCanton(puntos, tam).map(({o, x, y, anchor}) => svg`<text x=${x} y=${y} text-anchor=${anchor} class=${`canton-pin${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} aria-hidden="true">${o.canton}</text>`) : ""}`}
   </svg>`;
 }
