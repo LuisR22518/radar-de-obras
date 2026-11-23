@@ -224,7 +224,8 @@ form select, form input[type="number"], form textarea, form input[type="text"] {
 .mapa .pin.atenuado { opacity: 0.2; }
 .mapa .pin.activo circle, .mapa .pin:hover circle { stroke: var(--tinta); stroke-width: 3; }
 
-.herramientas { display: flex; gap: 0.75rem; align-items: end; margin-bottom: 0.5rem; }
+.herramientas { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; margin-bottom: 0.5rem; }
+.herramientas > form:first-child { flex: 1 1 100%; }
 .herramientas form { flex: 1; width: auto; max-width: none; flex-direction: column; align-items: stretch; gap: 0.3rem; }
 .herramientas form label { font-size: var(--t-sm); color: var(--grafito); width: auto; padding: 0; }
 .herramientas form input { width: 100%; }
@@ -466,8 +467,9 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
 .ficha-c p { max-width: none; }
 .fc-arriba { margin-bottom: 0.75rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
 .fc-volver { font-weight: 600; text-decoration: none; }
-.filtros { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; width: 100%; }
-.filtros form { width: auto; }
+.filtros { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; flex: 1 1 auto; }
+.herramientas .filtros form { flex: 1 1 140px; }
+.herramientas .filtros select { width: 100%; }
 .desempate { display: block; font-size: var(--t-sm); color: var(--grafito); font-style: italic; }
 .fc-arriba form { width: 100%; max-width: 420px; }
 .fc-cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
