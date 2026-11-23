@@ -7,7 +7,6 @@ import {Plot, grafico, fechaTexto, fechaLarga, millones, num, plural, SENALES, E
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const pais = await FileAttachment("data/costa-rica.json").json();
-const provincias = await FileAttachment("data/provincias.json").json();
 const resumen = await FileAttachment("data/resumen.json").json();
 const base = senales;
 ```
@@ -129,8 +128,8 @@ function descargarLista() {
 
 <div class="tablero">
   <figure class="caja-mapa">
-    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 620), activo, provincias}))}
-    <figcaption>${leyendaObra()}Cada punto lleva el número de la lista. Toque una obra para ver su ficha.</figcaption>
+    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 420), activo}))}
+    <figcaption>${leyendaObra()}</figcaption>
   </figure>
   <div class="caja-lista">
     <div class="herramientas">

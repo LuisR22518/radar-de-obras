@@ -193,15 +193,16 @@ export function iconoEstado(estado, numero, tam = 26) {
   </svg>`;
 }
 export function leyendaObra() {
-  return html`<div class="leyenda">${Object.entries(ESTADO_OBRA).map(([k, e]) => html`<span>${iconoEstado(k, null, 16)}${e.label}</span>`)}</div>`;
+  return html`<div class="leyenda">${Object.entries(ESTADO_OBRA).map(([k, e]) => html`<span>${iconoEstado(k, null, 12)}${e.label}</span>`)}</div>`;
 }
 
 // Mapa de Costa Rica con un punto por obra; cada punto lleva el número de la lista.
-export function mapaObras(pais, obras, {width = 520, activo = null, provincias = null} = {}) {
-  const alto = Math.round(width * 0.9);
-  const proy = d3.geoMercator().fitExtent([[16, 16], [width - 16, alto - 16]], pais);
+// Minimalista: solo la silueta del país y un punto numerado por obra (Avance 2: mapa en escala de grises).
+export function mapaObras(pais, obras, {width = 420, activo = null} = {}) {
+  const alto = Math.round(width * 0.82);
+  const proy = d3.geoMercator().fitExtent([[10, 10], [width - 10, alto - 10]], pais);
   const camino = d3.geoPath(proy);
-  const tam = width < 420 ? 24 : 28;
+  const tam = width < 360 ? 20 : 22;
   // Las obras con menor prioridad se dibujan primero, para que las urgentes queden encima
   const puntos = [...obras].sort((a, b) => b.orden - a.orden).map((o) => {
     const [x, y] = proy([o.lon, o.lat]);
@@ -220,13 +221,8 @@ export function mapaObras(pais, obras, {width = 520, activo = null, provincias =
     }
   }
   return html`<svg class="mapa" viewBox="0 0 ${width} ${alto}" width=${width} height=${alto} aria-hidden="true">
-    ${svg`<text x=${proy([-83.35, 10.95])[0]} y=${proy([-83.35, 10.95])[1]} class="mar">Mar Caribe</text>
-    <text x=${proy([-85.55, 8.55])[0]} y=${proy([-85.55, 8.55])[1]} class="mar">Océano Pacífico</text>
-    <path d=${camino(pais)} fill="var(--niebla)" stroke="var(--trazo)" stroke-width="1" stroke-linejoin="round"/>
-    ${provincias ? provincias.features.map((f) => svg`<path d=${camino(f)} class="provincia" />`) : ""}
-
-    ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="1" />
-      <circle cx=${p.x0} cy=${p.y0} r="2" fill="var(--grafito)" />` : "")}
+    ${svg`<path d=${camino(pais)} fill="var(--niebla)" stroke="none"/>
+    ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="0.75" />` : "")}
     ${puntos.map(({o, x, y}) => svg`<a href=${`./ficha.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>
       <title>${`${o.orden}. ${o.nombre} (${o.canton}): ${ESTADO_OBRA[o.estado].label.toLowerCase()}`}</title>
