@@ -3,7 +3,7 @@ title: Obras
 ---
 
 ```js
-import {fechaTexto, plural, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, iconoEstado, chipEstado, leyendaObra, leyendaEstados, mapaObras, asegurarRayado, esReal, pulso, miniatura} from "./components/lupia.js";
+import {fechaTexto, fechaLarga, millones, tieneDato, plural, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, iconoEstado, chipEstado, leyendaObra, leyendaEstados, mapaObras, asegurarRayado, esReal, pulso, miniatura} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const semanal = await FileAttachment("data/matriz_semanal.csv").csv({typed: true});
@@ -14,8 +14,14 @@ const resumen = await FileAttachment("data/resumen.json").json();
 const fotoPiloto = await FileAttachment("data/fotos-piloto/20240319-090439.jpg").url();
 ```
 
+<section class="portada" aria-labelledby="titulo">
+  <p class="antetitulo">Seguimiento ciudadano de obras públicas con las cámaras de dIAra</p>
+  <h1 id="titulo">¿Cómo va la obra de su comunidad?</h1>
+  <p class="bajada">Vea si la cámara vio trabajo, qué tan confiable es ese dato y la evidencia, en menos de un minuto.</p>
+</section>
+
 ```js
-// Portada: la pregunta de la ciudadana, el buscador y cuatro cifras que también sirven de filtro
+// El buscador y cuatro cifras que también sirven de filtro (llegan con los datos)
 const lista = ordenar(senales, resumen.pesos);
 const busqueda = Inputs.text({label: "Buscar una obra", placeholder: "Nombre de la obra, cantón o provincia", width: "100%"});
 const texto = Generators.input(busqueda);
@@ -34,16 +40,13 @@ function cifra(estado, etiqueta, valor, tono) {
   };
   return boton;
 }
-display(html`<section class="portada" aria-labelledby="titulo">
-  <p class="antetitulo">Seguimiento ciudadano de obras públicas con las cámaras de dIAra</p>
-  <h1 id="titulo">¿Cómo va la obra de su comunidad?</h1>
-  <p class="bajada">Vea si la cámara vio trabajo, qué tan confiable es ese dato y la evidencia, en menos de un minuto.</p>
+display(html`<div class="portada-controles">
   <div class="portada-buscador">${busqueda}${filtroProvincia}${filtroEstado}</div>
   <p class="portada-nota">Datos al ${fechaTexto(resumen.fecha_corte)}. Prototipo académico: una obra usa datos reales del piloto de dIAra y las demás son simuladas a partir de ellos. <a href="./datos.html">De dónde salen los datos</a></p>
-</section>
+</div>
 <div class="cifras-fila" role="group" aria-label="Resumen de las obras (cada cifra filtra la lista)">
   ${cifra("Todos", "Obras en seguimiento", lista.filter((o) => !o.historica).length, "")}
-  ${cifra("revisar", "Con alertas", cuenta("revisar"), "alerta")}
+  ${cifra("revisar", "Necesitan revisión", cuenta("revisar"), "alerta")}
   ${cifra("sin_alertas", "Sin alertas", cuenta("sin_alertas"), "ok")}
   ${cifra("sin_datos", "Cámara sin datos", cuenta("sin_datos"), "gris")}
 </div>`);
@@ -70,6 +73,8 @@ function fotoDe(o) {
   img.onerror = () => { img.onerror = null; img.src = f.enlace; };
   return img;
 }
+// Costo y fecha de entrega: las dos cifras que la gente busca primero en una obra pública
+const datosClave = (o) => [tieneDato(o.monto_vigente_crc) ? millones(o.monto_vigente_crc) : null, o.fecha_fin_vigente ? `entrega: ${fechaLarga(o.fecha_fin_vigente)}` : null].filter(Boolean).join(" · ");
 const semanasDe = (id) => semanal.filter((d) => d.obra_id === id).sort((a, b) => a.semana - b.semana).slice(-8);
 function tarjetaObra(o) {
   const semanas = semanasDe(o.obra_id);
@@ -78,7 +83,7 @@ function tarjetaObra(o) {
       <span class="obra-foto">${fotoDe(o)}</span>
       <span class="obra-cuerpo">
         <span class="obra-titulo">${iconoEstado(o.estado, o.orden, 22)}<span class="obra-nombre">${o.nombre}</span>${esReal(o) ? html`<span class="etiqueta-real">Datos reales</span>` : ""}</span>
-        <span class="obra-lugar">${o.canton}, ${o.provincia}</span>
+        <span class="obra-lugar">${o.canton}, ${o.provincia}${datosClave(o) ? html`<span class="obra-clave"> · ${datosClave(o)}</span>` : ""}</span>
         <span class="obra-estado">${chipEstado(o.estado)}<span class="obra-porque">${unirFrase(razonesCortas(o))}</span></span>
         ${semanas.length ? html`<span class="obra-semanas">${pulso(semanas, {celda: 14, alto: 14, sep: 3})}<span>últimas ${plural(semanas.length, "semana", "semanas")}</span></span>` : ""}
       </span>
@@ -125,4 +130,19 @@ display(html`<div class="inicio-cuerpo" id="obras">
     document.removeEventListener("focusin", sobre);
   });
 }
+```
+
+```js
+// Cómo sabe LupIA si hubo trabajo: tres pasos con las cifras del método (salen de radar/config.py, no se escriben a mano)
+const metodo = resumen.metodo ?? {};
+const horario = metodo.horario_laboral ? ` (de ${metodo.horario_laboral[0]}:00 a ${metodo.horario_laboral[1]}:59)` : "";
+display(html`<section class="como" aria-labelledby="t-como">
+  <h2 id="t-como">¿Cómo sabe LupIA si hubo trabajo?</h2>
+  <ol class="como-pasos">
+    <li><span class="como-num" aria-hidden="true">1</span><div><b>La cámara toma fotos de la obra</b><p>${metodo.intervalo_seg ? `Una cada ${metodo.intervalo_seg} segundos, más o menos, durante el día.` : "Varias por hora durante el día."} Las personas salen difuminadas.</p></div></li>
+    <li><span class="como-num" aria-hidden="true">2</span><div><b>La IA de dIAra busca personas y máquinas</b><p>No ve todo: ${metodo.sensibilidad_modelo ? `en el piloto encontró unas ${Math.round(100 * metodo.sensibilidad_modelo)} de cada 100 que se veían en las fotos.` : "puede pasar por alto a alguien."}</p></div></li>
+    <li><span class="como-num" aria-hidden="true">3</span><div><b>LupIA resume cada día</b><p>${metodo.umbral_actividad ? `Hubo trabajo si en ${Math.round(100 * metodo.umbral_actividad)} % o más de las fotos de la jornada${horario} aparece alguien o alguna máquina.` : "Hubo trabajo si aparece alguien o alguna máquina en buena parte de las fotos."} Si no llegan fotos, el día queda «sin datos».</p></div></li>
+  </ol>
+  <p class="como-mas">Ver personas o máquinas no mide cuánto avanzó la obra: eso lo informa la ejecutora. <a href="./metodologia.html">Cómo funciona, paso a paso</a></p>
+</section>`);
 ```

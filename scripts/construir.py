@@ -168,6 +168,10 @@ def calcular() -> dict:
     res["vence_informe_dias"], res["vence_pago_dias"] = C.VENCE_INFORME_DIAS, C.VENCE_PAGO_DIAS
     res["dias_sin_datos_camara"] = C.DIAS_SIN_DATOS_DISPOSITIVO
     res["canal_denuncias"] = C.CANAL_DENUNCIAS
+    # Cómo funciona la cámara y la IA, para explicarlo en las páginas sin escribir cifras a mano
+    res["metodo"] = {"intervalo_seg": C.INTERVALO_SEG, "umbral_actividad": C.UMBRAL_ACTIVIDAD,
+                     "sensibilidad_modelo": C.SENSIBILIDAD_MODELO, "horario_laboral": list(C.HORARIO_LABORAL),
+                     "lluvia_fuerte_mm": C.LLUVIA_FUERTE_MM}
     leer = lambda nombre: (C.REGISTRO / nombre).read_text(encoding="utf-8") if (C.REGISTRO / nombre).exists() else ""  # noqa: E731
     res["registro_actualizado"] = leer("actualizado.txt").strip()
     res["registro_hoja"] = json.loads(leer("fuente.json")).get("url", "") if leer("fuente.json") else ""

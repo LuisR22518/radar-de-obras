@@ -16,13 +16,16 @@ El auditor solo lee. La gerencia y los encargados de actualización editan la ho
 
 Para conectar datos nuevos de dIAra no hay que cambiar código: se copia la carpeta de la cámara en `datos/diara/` (el adaptador `radar/diara.py` reconoce el CSV de producción y las etiquetas del piloto) y se registra la cámara en la hoja.
 
-LupIA le permite a un auditor **identificar, priorizar, filtrar, separar, analizar, contrastar, verificar y documentar** las obras que ameritan revisión. Tiene cinco páginas:
+LupIA está pensada primero para la **inspectora ciudadana** que sigue una obra desde el celular, y en segundo lugar para el **fiscalizador de la CGR**. Tiene estas páginas:
 
-- **Qué revisar:** cuántas obras necesitan revisión, un mapa de Costa Rica y la lista en orden con la razón en palabras; búsqueda, descarga de la lista y, en paneles plegables, cómo se decide el orden, la importancia de cada señal y el cruce de riesgo y monto.
-- **Ficha de cada obra:** por qué necesita revisión, datos clave y cinco pestañas: resumen (qué sabemos y qué no), actividad diaria, avance y pagos, fotos con detecciones (reales en la obra del piloto) y hallazgo y acción: criterio, condición, causa y efecto (NGASP 204), la acción elegida y su seguimiento, con expediente descargable.
-- **Datos:** para el auditor. De dónde sale cada dato, qué tan al día está cada obra y qué no se puede afirmar con estos datos.
-- **Mantenimiento del registro:** para la gerencia y los encargados de actualización (enlace al pie de cada página). Lo que hay que corregir o poner al día, el estado de cada obra, quién hace qué y los últimos cambios.
+- **Obras (inicio):** la pregunta «¿Cómo va la obra de su comunidad?», un buscador con filtros por provincia y estado, cuatro cifras que también filtran la lista, el mapa y una tarjeta por obra con su foto más reciente, el estado, el costo, la fecha de entrega y la tira de las últimas 8 semanas. Al final, en tres pasos, cómo sabe LupIA si hubo trabajo.
+- **Ficha de cada obra:** la respuesta en una frase junto al nombre, con la confianza del dato; la foto más reciente; las 8 semanas (se toca una para ver cada día); dos fotos para comparar; las etapas en una línea de tiempo con la marca de hoy; lo que ha reportado la comunidad; el avance reportado frente al previsto, el costo y los cambios al contrato; qué no se puede concluir; y «Reportar algo que vi», que arma el reporte con la evidencia para enviarlo por la Denuncia Digital de la CGR. Se puede compartir por WhatsApp o copiar el enlace. El detalle para fiscalización va plegado al final.
+- **Para la Contraloría:** la lista de prioridades del fiscalizador (orden por puntaje y, en empate, por monto), con mapa, búsqueda, descarga, «Sus acciones abiertas» y cómo se decide el orden. Desde ahí se abre el **análisis completo** de cada obra: resumen, actividad diaria, avance y pagos, fotos con detecciones y hallazgo y acción (NGASP 204), con su seguimiento.
+- **Datos:** de dónde sale cada dato, qué tan al día está cada obra y qué no se puede afirmar con estos datos.
 - **Cómo funciona:** los pasos, las cinco señales, de dónde salen los datos y quién los mantiene, y los límites; el detalle técnico va plegado.
+- **Mantenimiento del registro:** para la gerencia y los encargados de actualización (enlace al pie de cada página). Lo que hay que corregir o poner al día, el estado de cada obra, quién hace qué y los últimos cambios.
+
+Al compartir un enlace de LupIA (por ejemplo, por WhatsApp) se muestra la imagen `recursos/compartir.png`.
 
 ## Cómo correrlo en tu computadora
 

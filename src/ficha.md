@@ -99,28 +99,41 @@ const datosAl = real ? `Datos de ${fecha(o.periodo_desde)} a ${fecha(corte)} de 
 const sirve = reg?.necesidad_publica
   ? html`<p class="fc-sirve"><span>Sirve para</span> ${reg.necesidad_publica}</p>`
   : html`<p class="fc-sirve fc-tenue">No se ha registrado para qué sirve esta obra.</p>`;
+// Título de la pestaña con el nombre de la obra (sirve al guardar o compartir el enlace)
+document.title = `${o.nombre} (${o.canton}) · LupIA`;
+// Compartir: por WhatsApp (el canal que la gente ya usa) o copiando el enlace
+const enlaceFicha = `${location.origin}${location.pathname}?id=${obraId}`;
+const textoCompartir = `${o.nombre} (${o.canton}, ${o.provincia}): ${respuesta} ${nivelConfianza}. Véalo en LupIA: ${enlaceFicha}`;
+const botonWhatsapp = html`<a class="fc-boton fc-secundario" href=${`https://wa.me/?text=${encodeURIComponent(textoCompartir)}`} target="_blank" rel="noopener">Compartir por WhatsApp</a>`;
+const botonCopiar = html`<button type="button" class="fc-boton fc-fantasma">Copiar enlace</button>`;
+botonCopiar.onclick = async () => {
+  try { await navigator.clipboard.writeText(enlaceFicha); botonCopiar.textContent = "Enlace copiado"; }
+  catch { botonCopiar.textContent = "No se pudo copiar"; }
+};
 const secCabeza = html`<header class="fc-hero tarjeta">
-  <div class="fc-hero-texto">
+  <div class="fc-hero-titulo">
     <div class="fc-etiquetas">${etiqueta}${chipEstado(estado)}</div>
     <h1>${o.nombre}</h1>
     <p class="fc-lugar">${o.canton}, ${o.provincia} · ${o.institucion_ejecutora}</p>
-    ${sirve}
-    <a class="fc-boton" href="#reportar">Reportar algo que vi</a>
   </div>
-  <div class="fc-hero-foto">${await marco(fotos.at(-1))}</div>
-</header>
-<section class=${`fc-respuesta fc-${tono}`} aria-label="Respuesta rápida">
-  <span class="fc-respuesta-icono" aria-hidden="true">${ICONO_TONO[tono]}</span>
-  <div>
-    <p class="fc-frase">${respuesta}</p>
-    ${alertasTexto ? html`<p class="fc-alertas"><b>Por qué LupIA la marcó:</b> ${alertasTexto}</p>` : ""}
-    <div class="fc-confianza">
-      <b>${nivelConfianza}</b>
-      <span class="fc-medidor" role="img" aria-label=${`La cámara envió fotos ${conDatos} de ${diasVentana.length} días`}><span style=${`width: ${Math.round(100 * proporcionDatos)}%`}></span></span>
-      <span>${sinCamara ? "La cámara dejó de enviar fotos." : `La cámara envió fotos ${conDatos} de ${diasVentana.length} días.`} ${datosAl}</span>
+  <section class=${`fc-respuesta fc-${tono}`} aria-label="Respuesta rápida">
+    <span class="fc-respuesta-icono" aria-hidden="true">${ICONO_TONO[tono]}</span>
+    <div>
+      <p class="fc-frase">${respuesta}</p>
+      ${alertasTexto ? html`<p class="fc-alertas"><b>Por qué LupIA la marcó:</b> ${alertasTexto}</p>` : ""}
+      <div class="fc-confianza">
+        <b>${nivelConfianza}</b>
+        <span class="fc-medidor" role="img" aria-label=${`La cámara envió fotos ${conDatos} de ${diasVentana.length} días`}><span style=${`width: ${Math.round(100 * proporcionDatos)}%`}></span></span>
+        <span>${sinCamara ? "La cámara dejó de enviar fotos." : `La cámara envió fotos ${conDatos} de ${diasVentana.length} días.`} ${datosAl}</span>
+      </div>
     </div>
+  </section>
+  <div class="fc-hero-foto">${await marco(fotos.at(-1))}</div>
+  <div class="fc-hero-detalle">
+    ${sirve}
+    <div class="fc-acciones"><a class="fc-boton" href="#reportar">Reportar algo que vi</a>${botonWhatsapp}${botonCopiar}</div>
   </div>
-</section>`;
+</header>`;
 ```
 
 ```js
@@ -246,12 +259,25 @@ const secFotos = html`<section class="fc-bloque tarjeta">
 ```
 
 ```js
+// Lo que ha reportado la comunidad (registro, pestaña reportes_ciudadanos), como en Tracka o Sumbong sa Pangulo
+const reportesOrden = [...reportes].sort((a, b) => b.fecha - a.fecha);
+const secComunidad = html`<section class="fc-bloque tarjeta">
+  <h2>Lo que ha reportado la comunidad</h2>
+  ${reportesOrden.length
+    ? html`<ul class="fc-comunidad">${reportesOrden.map((r) => html`<li><span>${fecha(r.fecha)}</span><q>${r.detalle}</q></li>`)}</ul>
+      <p class="fc-tenue fc-nota-barras">Reportes anotados en el registro de LupIA.</p>`
+    : html`<p class="fc-tenue">No hay reportes de la comunidad anotados para esta obra.</p>`}
+</section>`;
+```
+
+```js
 // 6 · Qué no se puede concluir (cambia según la situación de la obra)
 const notas = [];
 if (terminada) notas.push("Que la cámara ya no vea trabajo es lo esperado en una obra terminada; no dice nada sobre la calidad de lo construido.");
 else if (sinCamara) notas.push(`No sabemos si hubo trabajo desde el ${fechaTexto(siguienteDia(ultimoConDatos))}: sin fotos no se puede afirmar que la obra esté detenida ni que avance.`);
 else if (parada) notas.push("Que la cámara no vea trabajo no prueba que la obra esté abandonada: puede haber lluvia, un feriado, una suspensión autorizada o trabajo fuera del ángulo de la cámara.");
 else notas.push("Ver personas o máquinas no mide cuánto avanzó la obra: el avance lo informa la ejecutora.");
+if (resumen.metodo?.sensibilidad_modelo) notas.push(`La IA no ve todo: en el piloto encontró unas ${Math.round(100 * resumen.metodo.sensibilidad_modelo)} de cada 100 personas y máquinas que se veían en las fotos.`);
 for (const s of suspensiones) notas.push(`Hay una suspensión registrada en el contrato: ${s.detalle.toLowerCase()} (${fecha(s.fecha)}).`);
 if (o.explicacion_inactividad) notas.push(`Posible explicación registrada: ${o.explicacion_inactividad}.`);
 if (!real) notas.push("Esta es una obra de prueba: sus datos son simulados a partir del piloto real de dIAra.");
@@ -264,7 +290,6 @@ const secLimites = html`<section class="fc-bloque tarjeta fc-limites">
 ```js
 // 7 · Reportar algo que vi: se arma el texto con la evidencia y se envía por el canal oficial de la CGR
 const queVio = Inputs.textarea({label: "¿Qué vio en la obra?", placeholder: "Por ejemplo: desde hace dos semanas no hay trabajadores y la zanja sigue abierta.", rows: 3});
-const enlaceFicha = `${location.origin}${location.pathname}?id=${obraId}`;
 const atrasadas = etapas.filter((h) => h.estado === "atrasada");
 const armarReporte = (vio) => [
   `Reporte sobre: ${o.nombre}, ${o.canton} (${o.provincia})`,
@@ -275,6 +300,16 @@ const armarReporte = (vio) => [
   `Evidencia: ${enlaceFicha}`,
   real ? "" : "Nota: obra de prueba de un prototipo académico; datos simulados."
 ].filter(Boolean).join("\n");
+const OPCIONES_VIO = ["No hay trabajadores ni máquinas", "La obra parece abandonada", "Veo daños o trabajo de mala calidad", "Está terminada pero no se usa", "Hay trabajo normal"];
+const opcionesVio = html`<div class="fc-opciones" role="group" aria-label="Respuestas rápidas">${OPCIONES_VIO.map((t) => {
+  const b = html`<button type="button" class="fc-opcion">${t}</button>`;
+  b.onclick = () => {
+    queVio.value = `${t}. `;
+    queVio.dispatchEvent(new Event("input", {bubbles: true}));
+    queVio.querySelector("textarea")?.focus();
+  };
+  return b;
+})}</div>`;
 const textoReporte = html`<pre class="fc-texto-reporte" aria-label="Reporte listo para enviar">${armarReporte("")}</pre>`;
 queVio.addEventListener("input", () => { textoReporte.textContent = armarReporte(queVio.value); });
 const copiar = html`<button type="button" class="fc-boton">Copiar el reporte</button>`;
@@ -286,8 +321,11 @@ const canal = resumen.canal_denuncias;
 const secReporte = html`<section class="fc-bloque tarjeta fc-reportar" id="reportar">
   <h2>Reportar algo que vi</h2>
   <p>LupIA no recibe denuncias: le arma el reporte con la evidencia para que lo envíe por el canal oficial de la Contraloría. Así su reporte llega con fechas y datos, no solo con lo que vio.</p>
+  <p class="fc-tenue fc-paso">Toque una opción o escriba con sus palabras:</p>
+  ${opcionesVio}
   ${queVio}
   ${textoReporte}
+  <p class="fc-consejo"><b>Consejo:</b> si puede, tome fotos con la fecha visible y adjúntelas en la Denuncia Digital. Son la mejor evidencia.</p>
   <div class="fc-acciones">${copiar}<a class="fc-boton fc-secundario" href=${canal.url} target="_blank" rel="noopener">Ir a Denuncia Digital de la CGR ↗</a></div>
   <p class="fc-tenue">También puede llamar al ${canal.telefono}. Sus datos personales los maneja la Contraloría, no LupIA.</p>
 </section>`;
@@ -333,7 +371,7 @@ display(html`<div class="ficha-c">
   <div class="fc-arriba"><a class="fc-volver" href="./index.html">← Todas las obras</a>${selector}</div>
   ${secCabeza}
   <div class="fc-columnas">
-    <div class="fc-principal">${secSemanas}${secFotos}${secEtapas}</div>
+    <div class="fc-principal">${secSemanas}${secFotos}${secEtapas}${secComunidad}</div>
     <aside class="fc-lateral" aria-label="Contrato y límites">${secContrato}${secLimites}</aside>
   </div>
   ${secReporte}
