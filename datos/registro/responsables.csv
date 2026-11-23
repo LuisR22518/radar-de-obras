@@ -1,3 +1,3 @@
-nombre,cargo,rol,activo
-Equipo LupIA (carga inicial),Equipo del proyecto,gerencia,si
-Encargado de actualización (ejemplo),Encargado de seguimiento de obras,encargado_actualizacion,si
+nombre,cargo,rol,activo,correo
+Equipo LupIA (carga inicial),Equipo del proyecto,gerencia,si,
+Encargado de actualización (ejemplo),Encargado de seguimiento de obras,encargado_actualizacion,si,
