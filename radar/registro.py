@@ -223,8 +223,13 @@ def leer_hoja(archivo_xlsx) -> dict:
         if tabla not in libro:
             crudo[tabla] = pd.DataFrame(columns=[c for c, _, _ in cols])
             continue
-        df = libro[tabla].dropna(how="all")
+        df = libro[tabla]
         df.columns = [str(c).strip() for c in df.columns]
+        # Una fila cuenta si tiene algún dato en las columnas del registro. Las columnas calculadas
+        # de la hoja (por ejemplo, el estado de los hitos) se ignoran y no crean filas vacías.
+        propias = [c for c, _, _ in cols if c in df.columns]
+        df = df.replace(r"^\s*$", pd.NA, regex=True)
+        df = df.dropna(how="all", subset=propias or None)
         out = pd.DataFrame(index=range(len(df)))
         tipos = {c: tipo for c, tipo, _ in cols}
         for col in df.columns:
