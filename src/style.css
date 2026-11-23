@@ -513,9 +513,10 @@ details:not(.panel) summary { cursor: pointer; font-weight: 600; margin-top: 1re
 .fc-datos dd { margin: 0; }
 .fc-datos ul { margin: 0; padding-left: 1.1rem; }
 .fc-elegir { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.fc-elegir form { display: block; width: 100%; min-width: 0; max-width: 100%; }
-.fc-elegir form label { display: block; width: auto; margin-bottom: 0.2rem; }
-.fc-elegir select { width: 100%; max-width: 100%; min-width: 0; }
+/* Los selectores de Inputs traen un ancho fijo (240 px más la etiqueta): aquí ocupan su columna */
+.ficha-c .fc-elegir form { display: block !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; --input-width: 100%; }
+.ficha-c .fc-elegir form label { display: block; width: auto !important; margin-bottom: 0.2rem; }
+.ficha-c .fc-elegir select { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 .fc-arriba select { max-width: 100%; }
 .fc-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
 .fc-foto { margin: 0; }
