@@ -71,6 +71,30 @@ ${tablaObras()}
 - **Que el avance y los pagos sean ciertos.** Son lo que reporta la ejecutora; LupIA los compara con lo que vio la cámara, pero no revisa los documentos.
 - **Nada de las obras simuladas.** Sus contratos, informes y pagos son ficticios; solo la escuela del piloto en Pococí usa datos reales de dIAra.
 
-<p class="nota-tabla">¿Vio un dato que no cuadra? Abra la ficha de la obra, entre a «Detalle para fiscalización» → «Abrir el análisis completo» y use «Reportar un dato que no cuadra», al final. La gerencia y los encargados de actualización lo corrigen desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
+<p class="nota-tabla">¿Vio un dato que no cuadra? Abra la obra desde <a href="./contraloria.html">Para la Contraloría</a> y use «Reportar un dato que no cuadra», al final de la página. La gerencia y los encargados de actualización lo corrigen desde <a href="./mantenimiento.html">Mantenimiento del registro</a>.</p>
+
+## Listos para un estándar abierto
+
+Los datos del registro corresponden a OC4IDS, el estándar abierto de datos de infraestructura (<a href="https://standard.open-contracting.org/infrastructure/latest/es/reference/schema" target="_blank" rel="noopener">referencia del esquema</a>). CoST Costa Rica lo usa en la plataforma nacional de datos abiertos de infraestructura que presentó en noviembre de 2025 (<a href="https://delfino.cr/2025/11/cost-costa-rica-presenta-indice-de-transparencia-2025-y-plataforma-nacional-de-datos-abiertos-en-infraestructura" target="_blank" rel="noopener">nota de prensa</a>). Con esta correspondencia, LupIA podría tomar los datos de las obras de esa plataforma en lugar de cargarlos a mano.
+
+| Dato en LupIA | Campo en OC4IDS |
+| --- | --- |
+| Código y nombre de la obra | `id`, `title` |
+| Para qué sirve | `purpose` |
+| Tipo de obra | `sector` |
+| Provincia, cantón y coordenadas | `locations` (`address`, `geometry`) |
+| Institución ejecutora | `publicAuthority` |
+| Contratista | `contractingProcesses` → `summary.suppliers` |
+| Monto original del contrato | `contractingProcesses` → `summary.contractValue` |
+| Inicio y fin según el contrato | `period` (`startDate`, `endDate`) |
+| Cambios de monto, prórrogas y suspensiones | `contractingProcesses` → `summary.modifications` |
+| Etapas de la obra | `milestones` (`dueDate`, `dateMet`, `status`) |
+| Avance previsto y avance reportado | `forecasts` y `metrics` |
+| Pagos | `transactions` |
+| Recepción de la obra | `completion.endDate` |
+| Fotos | `documents` |
+| Lo que ve la cámara y los reportes ciudadanos | No tienen campo en OC4IDS: son el aporte propio de LupIA |
+
+<p class="nota-tabla">Correspondencia propuesta por el equipo con la versión vigente del estándar; no es una publicación certificada.</p>
 
 </div>

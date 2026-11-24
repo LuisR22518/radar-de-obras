@@ -1,8 +1,8 @@
-obra_id,fecha,tipo,descripcion,con_foto,canal,actualizado_por
-H,2026-10-22,seguridad,Zanja abierta sin señalización frente a la escuela.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-C,2026-10-28,obra detenida,Pasan días sin maquinaria en el camino.,no,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-H,2026-11-03,calidad,El agua se empoza donde ya trabajaron.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-A,2026-11-06,obra detenida,Desde hace semanas no se ve maquinaria en el puente.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-H,2026-11-10,obra detenida,La zanja sigue abierta y no hay trabajadores desde el lunes.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-A,2026-11-17,obra detenida,La obra sigue sin trabajadores; solo hay un guarda.,no,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
-H,2026-11-18,seguridad,Material acumulado sobre la vía.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial)
+obra_id,fecha,tipo,descripcion,con_foto,canal,actualizado_por,respuesta,fecha_respuesta
+H,2026-10-22,seguridad,Zanja abierta sin señalización frente a la escuela.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),La ejecutora colocó cintas y rótulos de precaución frente a la escuela.,2026-10-27
+C,2026-10-28,obra detenida,Pasan días sin maquinaria en el camino.,no,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),,
+H,2026-11-03,calidad,El agua se empoza donde ya trabajaron.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),La ejecutora programó la corrección del drenaje para la semana siguiente.,2026-11-09
+A,2026-11-06,obra detenida,Desde hace semanas no se ve maquinaria en el puente.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),,
+H,2026-11-10,obra detenida,La zanja sigue abierta y no hay trabajadores desde el lunes.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),,
+A,2026-11-17,obra detenida,La obra sigue sin trabajadores; solo hay un guarda.,no,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),,
+H,2026-11-18,seguridad,Material acumulado sobre la vía.,si,Denuncia ciudadana (simulado),Equipo LupIA (carga inicial),,

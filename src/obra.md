@@ -3,7 +3,8 @@ title: Análisis de obra
 ---
 
 ```js
-import {Plot, grafico, fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
+import {Plot, grafico} from "./components/graficos.js";
+import {fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const fichas = await FileAttachment("data/obras.csv").csv({typed: true});
@@ -28,6 +29,8 @@ const FOTOS = {
 };
 ```
 
+<p class="cargando" id="cargando">Cargando el análisis de la obra…</p>
+
 ```js
 const pedida = new URLSearchParams(location.search).get("id");
 const selector = Inputs.select(lista.map((d) => d.obra_id), {
@@ -39,6 +42,7 @@ const obraId = Generators.input(selector);
 
 ```js
 history.replaceState(null, "", `?id=${obraId}${location.hash}`);
+document.getElementById("cargando")?.remove();
 const o = porId.get(obraId);
 const ficha = fichaPorId.get(obraId);
 const siguiente = lista[o.orden % lista.length];
@@ -86,6 +90,7 @@ const sinDato = () => html`<span class="tenue">Sin dato</span>`;
 
 <div class="ficha-barra no-imprimir">
   <a class="volver" href="./contraloria.html">Volver a la lista de la Contraloría</a>
+  ${html`<a class="ver-ficha" href=${`./ficha.html?id=${obraId}`}>Ver cómo la ve la ciudadanía</a>`}
   <div class="ir">${selector}${html`<a class="boton secundario" href=${`./obra.html?id=${siguiente.obra_id}`}>Siguiente obra</a>`}</div>
 </div>
 
@@ -291,10 +296,20 @@ function franjaSemanas(width) {
 }
 const mediana = d3.median(senales.filter((d) => d.fase !== "terminada" && !d.en_cola_dispositivos && !d.historica), (d) => d.proporcion_semanas_activas);
 const conSerie = serie.some((d) => d.obra_id === obraId && d.serie === "previsto");
+// Respuesta corta a la pregunta de la pestaña, con las mismas reglas que deciden las alertas
+const alertasAvance = new Set(String(o.alertas ?? "").split(";"));
+const partesAvance = [];
+if (alertasAvance.has("brecha")) partesAvance.push(`No coincide: la ejecutora reporta ${num(o.incremento_reportado_pts)} puntos más de avance en 12 semanas, pero la cámara vio trabajo solo en ${num(100 * o.proporcion_semanas_activas, 0)} % de esas semanas.`);
+if (alertasAvance.has("atraso")) partesAvance.push(`Va atrasada: la ejecutora reporta ${num(o.avance_reportado_pct)} % y el cronograma esperaba ${num(o.avance_previsto_pct)} % (${num(o.atraso_pts)} puntos menos).`);
+const respuestaAvance = !conAvance ? null
+  : o.fase === "terminada" ? "La obra está terminada: lo reportado y lo observado ya no se comparan."
+  : partesAvance.length ? partesAvance.join(" ")
+  : `Sin diferencias que pasen su límite: reporta ${num(o.avance_reportado_pct)} % (el cronograma esperaba ${num(o.avance_previsto_pct)} %) y la cámara vio trabajo en ${num(100 * o.proporcion_semanas_activas, 0)} % de las últimas 12 semanas.`;
 ```
 
 <section class="pestana" id="p-avance" role="tabpanel" aria-labelledby="t-avance" hidden>
   <h2>¿Lo reportado coincide con lo que vio la cámara?</h2>
+  ${respuestaAvance ? html`<p class="respuesta-corta">${respuestaAvance}</p>` : ""}
   <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad observada cada semana.</p>
   ${conSerie ? html`<figure aria-label="Avance previsto, reportado y pagado de la obra">${resize((width) => contraste(width))}</figure>
   <figure aria-label="Actividad observada por semana">${resize((width) => franjaSemanas(width))}</figure>` : html`<p class="vacio">Esta obra no tiene contrato ni informes de avance en el registro, así que no hay con qué contrastar lo observado. Cuando el encargado de actualización de la obra los registre, este contraste aparecerá solo.</p>`}

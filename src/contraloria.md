@@ -3,13 +3,15 @@ title: Para la Contraloría
 ---
 
 ```js
-import {Plot, grafico, fechaTexto, fechaLarga, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
+import {fechaTexto, fechaLarga, millones, num, plural, SENALES, ESTADO_OBRA, ordenar, razonesCortas, unirFrase, leerDecision, iconoEstado, leyendaObra, mapaObras, asegurarRayado, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
 const pais = await FileAttachment("data/costa-rica.json").json();
 const resumen = await FileAttachment("data/resumen.json").json();
 const base = senales;
 ```
+
+<p class="cargando" id="cargando">Cargando las obras…</p>
 
 ```js
 // Búsqueda libre: obra, cantón, provincia, contratista o institución
@@ -41,6 +43,7 @@ const nReales = lista.filter(esReal).length;
 
 ```js
 // Encabezado: se dibuja cuando los datos están listos (sin marcadores de carga a medio llenar)
+document.getElementById("cargando")?.remove();
 display(html`<p class="aviso">Vista para fiscalizadores de la Contraloría. Datos al ${fechaTexto(resumen.fecha_corte)}. Prototipo académico: una obra usa datos reales del piloto de dIAra y las demás son simuladas a partir de ellos. <a href="./datos.html">Ver de dónde sale cada dato</a></p>
 <section class="inicio" aria-labelledby="titulo">
   <h1 id="titulo"><span class="marca marca-trazo">${plural(nRevisar, "obra necesita", "obras necesitan")} revisión</span></h1>
@@ -51,8 +54,9 @@ display(html`<p class="aviso">Vista para fiscalizadores de la Contraloría. Dato
 ```js
 function itemObra(o) {
   const registrada = accionAbierta(o.obra_id) ? CORTO[leerDecision(o.obra_id).accion] : leerDecision(o.obra_id)?.accion === "Descartar" ? "Descartada" : null;
+  // El fiscalizador va directo al análisis de la obra (desde ahí puede ver también la ficha ciudadana)
   return html`<li class=${`item ${o.estado}`} data-obra=${o.obra_id}>
-    <a href=${`./ficha.html?id=${o.obra_id}`}>
+    <a href=${`./obra.html?id=${o.obra_id}`}>
       ${iconoEstado(o.estado, o.orden)}
       <span class="cuerpo">
         <span class="nombre">${o.estado === "revisar" ? html`<span class="marca">${o.nombre}</span>` : o.nombre}${esReal(o) ? html` <span class="etiqueta-real">Datos reales</span>` : ""}</span>
@@ -130,7 +134,7 @@ function descargarLista() {
 
 <div class="tablero">
   <figure class="caja-mapa">
-    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 420), activo}))}
+    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 420), activo, enlace: (o) => `./obra.html?id=${o.obra_id}`}))}
     <figcaption>${leyendaObra()}</figcaption>
   </figure>
   <div class="caja-lista">
@@ -152,30 +156,82 @@ const SENTIDO = {
   contrato: "El monto aumentó o se aprobó una prórroga hace poco.",
   ciudadania: "Personas de la comunidad reportaron problemas en el último mes."
 };
-function puntajes() {
-  const datos = lista.filter((o) => o.estado !== "sin_datos" && o.estado !== "historico");
-  return html`<table class="puntajes">
-    <caption class="sr-only">Puntaje de atención de cada obra</caption>
-    <thead><tr><th scope="col">Obra</th><th scope="col">Puntaje de 0 a 100</th></tr></thead>
-    <tbody>${datos.map((o) => html`<tr><td>${o.orden}. ${o.nombre}${o.senales_con_dato < 5 ? html`<br><small class="tenue">con ${o.senales_con_dato} de 5 señales; faltan datos del contrato</small>` : ""}</td>
-      <td><div class="barra"><b>${Math.round(o.puntaje_vivo)}</b><i><span class=${o.estado} style=${`width: ${o.puntaje_vivo}%`}></span></i></div></td></tr>`)}</tbody>
-  </table>`;
+// Tabla para comparar las obras señal por señal: cada columna se puede ordenar (tarea del fiscalizador: comparar y priorizar)
+const pctTexto = (x) => `${num(100 * x, 0)} %`;
+const COLUMNAS = [
+  {clave: "orden", titulo: "N.º", valor: (o) => o.orden, celda: (o) => o.orden, sube: true},
+  {clave: "nombre", titulo: "Obra", valor: (o) => o.nombre, sube: true,
+   celda: (o) => html`<a href=${`./obra.html?id=${o.obra_id}`}>${o.nombre}</a><br><small class="tenue">${o.canton}${o.senales_con_dato < 5 ? ` · con ${o.senales_con_dato} de 5 señales` : ""}</small>`},
+  {clave: "puntaje", titulo: "Puntaje (0 a 100)", valor: (o) => o.puntaje_vivo,
+   celda: (o) => html`<div class="barra"><b>${Math.round(o.puntaje_vivo)}</b><i><span class=${o.estado} style=${`width: ${o.puntaje_vivo}%`}></span></i></div>`},
+  {clave: "inactividad", titulo: "Días hábiles sin actividad", valor: (o) => o.racha_inactividad_dias, celda: (o) => num(o.racha_inactividad_dias, 0)},
+  {clave: "atraso", titulo: "Atraso (puntos)", valor: (o) => o.atraso_pts, celda: (o) => (tieneDato(o.atraso_pts) ? num(o.atraso_pts) : "—")},
+  {clave: "brecha", titulo: "Avance reportado y semanas con trabajo", valor: (o) => o.senal_brecha,
+   celda: (o) => (tieneDato(o.incremento_reportado_pts) ? html`+${num(o.incremento_reportado_pts)} puntos<br><small class="tenue">trabajo en ${pctTexto(o.proporcion_semanas_activas)} de las semanas</small>` : "—")},
+  {clave: "contrato", titulo: "Cambios al contrato", valor: (o) => o.senal_contrato,
+   celda: (o) => (o.aumento_monto_pct > 0 ? `Monto +${num(o.aumento_monto_pct)} %${o.prorroga_reciente ? " y prórroga" : ""}` : o.prorroga_reciente ? "Prórroga reciente" : tieneDato(o.aumento_monto_pct) ? "Sin cambios" : "—")},
+  {clave: "ciudadania", titulo: "Reportes ciudadanos (30 días)", valor: (o) => o.reportes_30d, celda: (o) => num(o.reportes_30d, 0)}
+];
+function tablaSenales(obras) {
+  const datos = obras.filter((o) => o.estado === "revisar" || o.estado === "sin_alertas");
+  if (!datos.length) return html`<p class="vacio">Ninguna obra con cámara funcionando coincide con la búsqueda o los filtros.</p>`;
+  let orden = {clave: "orden", sube: true};
+  const cuerpo = html`<tbody></tbody>`;
+  const encabezados = COLUMNAS.map((c) => {
+    const boton = html`<button type="button" class="ordenar">${c.titulo}<span class="flecha" aria-hidden="true"></span></button>`;
+    boton.onclick = () => {
+      orden = orden.clave === c.clave ? {clave: c.clave, sube: !orden.sube} : {clave: c.clave, sube: Boolean(c.sube)};
+      pintar();
+    };
+    return html`<th scope="col" data-clave=${c.clave}>${boton}</th>`;
+  });
+  function pintar() {
+    const col = COLUMNAS.find((c) => c.clave === orden.clave);
+    // Los datos que faltan van siempre al final
+    const ordenadas = [...datos].sort((a, b) => {
+      const va = col.valor(a), vb = col.valor(b);
+      const faltaA = !tieneDato(va), faltaB = !tieneDato(vb);
+      if (faltaA || faltaB) return faltaA - faltaB;
+      const cmp = typeof va === "string" ? va.localeCompare(vb, "es") : va - vb;
+      return orden.sube ? cmp : -cmp;
+    });
+    for (const th of encabezados) {
+      const activa = th.dataset.clave === orden.clave;
+      th.setAttribute("aria-sort", activa ? (orden.sube ? "ascending" : "descending") : "none");
+      th.querySelector(".flecha").textContent = activa ? (orden.sube ? " ▲" : " ▼") : "";
+    }
+    cuerpo.replaceChildren(...ordenadas.map((o) => {
+      const alertas = new Set(String(o.alertas ?? "").split(";"));
+      return html`<tr class=${o.estado}>${COLUMNAS.map((c) => {
+        const alerta = alertas.has(c.clave);
+        return html`<td class=${alerta ? "con-alerta" : ""}>${c.celda(o)}${alerta ? html` <span class="alerta-mini" aria-hidden="true">!</span><span class="sr-only">(pasa su límite)</span>` : ""}</td>`;
+      })}</tr>`;
+    }));
+  }
+  pintar();
+  return html`<div class="tabla-desliza" role="region" aria-label="Señales de cada obra" tabindex="0">
+    <table class="senales-tabla">
+      <caption class="sr-only">Señales de cada obra con la cámara funcionando. Use los botones del encabezado para ordenar.</caption>
+      <thead><tr>${encabezados}</tr></thead>
+      ${cuerpo}
+    </table>
+  </div>`;
 }
 ```
+
+<section class="comparar" aria-labelledby="t-comparar">
+  <h2 id="t-comparar">Comparar las señales</h2>
+  <p class="tenue">Ordene por cualquier columna tocando su nombre. El signo ! marca la señal que pasa su límite. Usa la misma búsqueda y los mismos filtros que la lista.</p>
+  ${tablaSenales(visibles)}
+</section>
 
 <section class="mas" aria-label="Más detalles">
   <details class="panel">
     <summary>¿Cómo decide LupIA el orden?</summary>
-    <div class="panel-cuerpo dos-columnas">
-      <div>
-        <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje y, si dos obras empatan, la de mayor monto. Si a una obra le falta un dato, como el contrato, el puntaje se calcula con las señales que sí tienen dato. La importancia de cada señal es fija, para que la prioridad sea la misma para todas las personas.</p>
-        <dl class="senales-texto">${SENALES.map((s) => html`<div><dt>${s.label}</dt><dd>${SENTIDO[s.key]}</dd></div>`)}</dl>
-        <p><a href="./metodologia.html">Ver el detalle de cada cálculo</a></p>
-      </div>
-      <div>
-        <h3>Puntaje de cada obra</h3>
-        ${puntajes()}
-      </div>
+    <div class="panel-cuerpo">
+      <p>LupIA revisa cinco señales en cada obra. Si alguna pasa su límite, la obra entra en «Necesitan revisión». Entre esas, va primero la de mayor puntaje y, si dos obras empatan, la de mayor monto. Si a una obra le falta un dato, como el contrato, el puntaje se calcula con las señales que sí tienen dato. La importancia de cada señal es fija, para que la prioridad sea la misma para todas las personas.</p>
+      <dl class="senales-texto">${SENALES.map((s) => html`<div><dt>${s.label}</dt><dd>${SENTIDO[s.key]}</dd></div>`)}</dl>
+      <p><a href="./metodologia.html#para-fiscalizadores">Ver el detalle de cada cálculo</a></p>
     </div>
   </details>
 </section>

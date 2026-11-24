@@ -12,34 +12,68 @@ const regla = {
   contrato: "Aumento del monto (20 % equivale a 1) o una prórroga aprobada en los últimos 90 días (0,5).",
   ciudadania: "Reportes ciudadanos en los últimos 30 días; 3 reportes equivalen a 1."
 };
+// Desde cuántos días hábiles sin actividad hay alerta (sale de radar/config.py a través de resumen.json)
+const diasAlerta = resumen.metodo?.dias_alerta_inactividad ?? Math.round(10 * resumen.umbrales_alerta.inactividad);
 const tablaSenales = html`<table>
   <thead><tr><th scope="col">Señal</th><th scope="col">Cómo se calcula</th><th scope="col">Peso inicial</th><th scope="col">Alerta desde</th></tr></thead>
   <tbody>${SENALES.map((s) => html`<tr><td><strong>${s.label}</strong></td><td>${regla[s.key]}</td><td>${resumen.pesos[s.key]}</td><td>${String(resumen.umbrales_alerta[s.key]).replace(".", ",")}</td></tr>`)}</tbody>
 </table>`;
 ```
 
+```js
+// En celular las tablas anchas se deslizan hacia los lados: las que se deslizan se pueden enfocar para moverlas con el teclado
+{
+  const ajustar = () => {
+    for (const t of document.querySelectorAll(".lectura table")) {
+      if (t.scrollWidth > t.clientWidth + 1) { t.tabIndex = 0; if (!t.hasAttribute("aria-label")) t.setAttribute("aria-label", "Tabla que se desliza hacia los lados"); }
+      else { t.removeAttribute("tabindex"); }
+    }
+  };
+  const espera = setTimeout(ajustar, 300);
+  addEventListener("resize", ajustar);
+  invalidation.then(() => { clearTimeout(espera); removeEventListener("resize", ajustar); });
+}
+```
+
 <div class="lectura">
 
 # Cómo funciona LupIA
 
-LupIA ayuda a los auditores de la Contraloría a decidir qué obras públicas revisar primero. Convierte lo que ven las cámaras de dIAra en señales explicables y respaldadas con evidencia. Indica dónde conviene revisar; nunca afirma que haya una irregularidad.
+LupIA usa las cámaras de dIAra para mostrar si hubo trabajo en una obra pública. Sirve a dos públicos: a las personas que quieren saber cómo va la obra de su comunidad y a los fiscalizadores de la Contraloría, que deciden qué obras revisar primero. Indica dónde conviene mirar; nunca afirma que haya una irregularidad.
 
 <p class="tenue">Datos al ${fechaTexto(resumen.fecha_corte)}.</p>
 
-## En cuatro pasos
+<p class="indice">En esta página: <a href="#para-la-ciudadania">Para la ciudadanía</a> · <a href="#para-fiscalizadores">Para fiscalizadores</a> · <a href="#datos-y-actualizacion">Datos y actualización</a> · <a href="#limites">Límites</a></p>
+
+<h2 id="para-la-ciudadania">Para la ciudadanía: cómo leer la ficha de una obra</h2>
+
+1. **La respuesta rápida** dice si la cámara vio trabajo. En verde azulado, hubo trabajo normal; en ámbar, hay algo que conviene revisar; en gris, la cámara no envió fotos y no se puede concluir nada.
+2. **Qué tan confiable es el dato:** cuántos días envió fotos la cámara. Si hay vacíos, el dato vale menos.
+3. **Las semanas:** un cuadro por semana. Lleno, si hubo trabajo; con borde ámbar, si no lo hubo; rayado, si no llegaron fotos. Toque una semana para ver cada día.
+4. **Costo, entrega y avance:** lo que dicen el contrato y la ejecutora. La cámara no mide el avance: ve personas y máquinas.
+5. **Qué no se puede concluir:** lluvia, feriados, suspensiones o trabajo fuera del ángulo de la cámara pueden explicar un día sin actividad.
+6. **Qué puede hacer:** compartir la ficha por WhatsApp o armar un reporte con la evidencia para la Denuncia Digital de la Contraloría. LupIA no recibe denuncias.
+
+<h2 id="para-fiscalizadores">Para fiscalizadores: cómo se ordenan las obras</h2>
+
+### En cuatro pasos
 
 1. **La cámara toma fotos** de la obra durante el día.
 2. **dIAra reconoce** personas y máquinas en cada foto.
 3. **LupIA resume cada día** como actividad, sin actividad o sin datos de la cámara, y lo cruza con feriados, suspensiones y lluvia.
 4. **LupIA compara** esa actividad con el contrato, el avance reportado y los reportes ciudadanos, y ordena las obras.
 
-## Las cinco señales
+### Las cinco señales
 
 Cada señal va de 0 a 1. Si una pasa su límite, la obra necesita revisión. El puntaje, de 0 a 100, suma las señales según su importancia y decide el orden.
 
 ${tablaSenales}
 
-## Datos y actualización
+### Alerta temprana, no declaratoria de paralización
+
+LupIA marca alerta desde ${diasAlerta} días hábiles seguidos sin personas ni máquinas, con la cámara funcionando. Es un aviso para revisar, no una declaratoria. Como referencia, la Contraloría de Perú considera paralizada una obra que no reporta avance físico durante seis meses o más (<a href="https://www.gob.pe/institucion/contraloria/noticias/896326-en-peru-existen-cerca-de-2300-obras-publicas-paralizadas-por-mas-de-s-26-mil-millones-a-diciembre-del-2023" target="_blank" rel="noopener">nota de la Contraloría de Perú</a>). Las dos medidas no son iguales, porque LupIA mide actividad observada y no avance físico, pero muestran la ventaja de la cámara: avisar meses antes.
+
+<h2 id="datos-y-actualizacion">Datos y actualización</h2>
 
 LupIA trabaja con tres capas. El auditor solo lee; los datos los mantiene quien corresponde y cada cambio queda registrado. Detalle por obra en <a href="./datos.html">Datos</a>.
 
@@ -51,7 +85,7 @@ LupIA trabaja con tres capas. El auditor solo lee; los datos los mantiene quien 
 
 Varias veces al día (o al momento, con «Publicar ahora» en Mantenimiento), LupIA lee la hoja del registro y revisa su calidad. Si encuentra errores, conserva la última versión buena y lo avisa; si no, recalcula todo y publica. Qué cargos cumplen esos roles dentro de la Contraloría está por confirmar con la institución.
 
-## Límites
+<h2 id="limites">Límites</h2>
 
 - La cámara ve personas y máquinas, no avance físico.
 - El modelo de dIAra encuentra unos 85 de cada 100 objetos visibles y se entrenó solo con fotos de la Escuela de Pococí; en otras obras puede funcionar peor.

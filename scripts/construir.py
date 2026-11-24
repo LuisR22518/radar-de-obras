@@ -53,9 +53,12 @@ def serie_avance(obras, eventos, avance, pagos) -> pd.DataFrame:
 
 def eventos_linea_tiempo(eventos, feriados, reportes) -> pd.DataFrame:
     filas = [[e["obra_id"], e["fecha"], "contrato", e["tipo"], e["detalle"]] for _, e in eventos.iterrows()]
-    filas += [[r["obra_id"], r["fecha"], "ciudadania", r["tipo"], r["descripcion"]] for _, r in reportes.iterrows()]
-    filas += [["*", f["fecha"], "feriado", "feriado", f["nombre"]] for _, f in feriados.iterrows()]
-    return pd.DataFrame(filas, columns=["obra_id", "fecha", "categoria", "tipo", "detalle"]).sort_values("fecha")
+    filas = [f + ["", None] for f in filas]
+    # Los reportes ciudadanos llevan la respuesta de la institución, si la hubo (para cerrar el ciclo en la ficha)
+    filas += [[r["obra_id"], r["fecha"], "ciudadania", r["tipo"], r["descripcion"],
+               r.get("respuesta", "") or "", r.get("fecha_respuesta")] for _, r in reportes.iterrows()]
+    filas += [["*", f["fecha"], "feriado", "feriado", f["nombre"], "", None] for _, f in feriados.iterrows()]
+    return pd.DataFrame(filas, columns=["obra_id", "fecha", "categoria", "tipo", "detalle", "respuesta", "fecha_respuesta"]).sort_values("fecha")
 
 
 def evidencia(diario, inventario, lectura, dias=21) -> pd.DataFrame:
@@ -171,7 +174,9 @@ def calcular() -> dict:
     # Cómo funciona la cámara y la IA, para explicarlo en las páginas sin escribir cifras a mano
     res["metodo"] = {"intervalo_seg": C.INTERVALO_SEG, "umbral_actividad": C.UMBRAL_ACTIVIDAD,
                      "sensibilidad_modelo": C.SENSIBILIDAD_MODELO, "horario_laboral": list(C.HORARIO_LABORAL),
-                     "lluvia_fuerte_mm": C.LLUVIA_FUERTE_MM}
+                     "lluvia_fuerte_mm": C.LLUVIA_FUERTE_MM,
+                     # Días hábiles seguidos sin actividad desde los que se marca alerta (umbral × tope)
+                     "dias_alerta_inactividad": round(C.UMBRALES_ALERTA["inactividad"] * C.DIAS_INACTIVIDAD_TOPE)}
     leer = lambda nombre: (C.REGISTRO / nombre).read_text(encoding="utf-8") if (C.REGISTRO / nombre).exists() else ""  # noqa: E731
     res["registro_actualizado"] = leer("actualizado.txt").strip()
     res["registro_hoja"] = json.loads(leer("fuente.json")).get("url", "") if leer("fuente.json") else ""

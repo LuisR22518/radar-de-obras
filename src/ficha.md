@@ -3,13 +3,14 @@ title: Ficha de la obra
 ---
 
 ```js
-import {Plot, fecha as fechaDia, fechaLarga, fechaTexto, num, millones, plural, esReal, estiloPlot, estadoObra, chipEstado, razonesCortas, unirFrase} from "./components/lupia.js";
+import {fecha as fechaDia, fechaLarga, fechaTexto, num, millones, plural, esReal, estiloPlot, estadoObra, chipEstado, razonesCortas, unirFrase} from "./components/lupia.js";
 const obras = await FileAttachment("data/senales.csv").csv({typed: true});
 const registro = await FileAttachment("data/obras.csv").csv({typed: true});
 const diario = await FileAttachment("data/estado_diario.csv").csv({typed: true});
 const semanal = await FileAttachment("data/matriz_semanal.csv").csv({typed: true});
 const eventos = await FileAttachment("data/eventos.csv").csv({typed: true});
-const evidencia = await FileAttachment("data/evidencia.csv").csv({typed: true});
+// La evidencia por foto solo se descarga para la obra con datos reales (las de prueba no la usan en la ficha)
+const archivoEvidencia = FileAttachment("data/evidencia.csv");
 const serie = await FileAttachment("data/serie_avance.csv").csv({typed: true});
 const hitos = await FileAttachment("data/hitos.csv").csv({typed: true});
 const fotosRegistro = await FileAttachment("data/fotos.csv").csv({typed: true});
@@ -27,6 +28,8 @@ const DIA = 864e5;
 const SEMANAS = 8;
 const porNombre = [...obras].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
 ```
+
+<p class="cargando" id="cargando">Cargando la ficha de la obra…</p>
 
 ```js
 const pedida = new URLSearchParams(location.search).get("id");
@@ -64,7 +67,6 @@ const terminada = o.fase === "terminada";
 const parada = !terminada && !sinCamara && o.racha_inactividad_dias >= 5;
 const habiles = diasVentana.filter((d) => d.es_habil && d.estado !== "sin_datos");
 const habilesConTrabajo = habiles.filter((d) => d.estado === "actividad").length;
-const siguienteDia = (f) => new Date(+f + DIA);
 // Fecha corta («3 jul»); lleva el año cuando no es el del corte, para no confundir 2025 con 2026
 const fecha = (d) => (d == null || d === "" ? "—" : new Date(d).getUTCFullYear() === new Date(corte).getUTCFullYear() ? fechaDia(d) : fechaLarga(d));
 ```
@@ -76,12 +78,14 @@ const explicacionParada = o.explicacion_inactividad ? String(o.explicacion_inact
 const etiqueta = real
   ? html`<span class="fc-etiqueta fc-real">Datos reales del piloto de dIAra (${new Date(corte).getUTCFullYear()})</span>`
   : html`<span class="fc-etiqueta">Datos simulados</span>`;
+// Se dice la última fecha con trabajo o con fotos («por última vez el…»): así no queda duda de qué día fue
 const respuesta = terminada
   ? `La obra está terminada${recepcion ? `: se recibió el ${fechaTexto(recepcion.fecha)}` : ""}.`
   : sinCamara
-  ? `No sabemos si hubo trabajo: la cámara no envía fotos desde el ${fechaTexto(siguienteDia(ultimoConDatos))}.`
+  ? (ultimoConDatos ? `No sabemos si hubo trabajo: la cámara envió fotos por última vez el ${fechaTexto(ultimoConDatos)}.` : "No sabemos si hubo trabajo: la cámara no ha enviado fotos.")
   : parada
-  ? `La cámara no ha visto trabajo desde el ${fechaTexto(siguienteDia(ultimoTrabajo))}.${explicacionParada.length ? ` Posible explicación: ${explicacionParada.join(" y ")}.` : ""}`
+  ? (ultimoTrabajo ? `La cámara vio trabajo por última vez el ${fechaTexto(ultimoTrabajo)}.` : "La cámara no ha visto trabajo en el período con fotos.") +
+    (explicacionParada.length ? ` Posible explicación: ${explicacionParada.join(" y ")}.` : "")
   : `En las últimas ${semanas.length} semanas, la cámara vio trabajo ${habilesConTrabajo} de ${plural(habiles.length, "día hábil", "días hábiles")} con fotos.`;
 const confianza = sinCamara
   ? "Dato incompleto: la cámara dejó de enviar fotos."
@@ -110,12 +114,21 @@ botonCopiar.onclick = async () => {
   try { await navigator.clipboard.writeText(enlaceFicha); botonCopiar.textContent = "Enlace copiado"; }
   catch { botonCopiar.textContent = "No se pudo copiar"; }
 };
+// Costo, entrega y avance reportado: lo que más pregunta la gente de una obra, a la vista sin bajar
+const datoClave = (etq, valor, nota) => html`<div><dt>${etq}</dt><dd>${valor}${nota ? html`<small>${nota}</small>` : ""}</dd></div>`;
+const cambioMonto = o.monto_vigente_crc && o.monto_original_crc && o.monto_vigente_crc !== o.monto_original_crc;
+const secClave = html`<dl class="fc-clave" aria-label="Datos clave de la obra">
+  ${datoClave("Costo", o.monto_vigente_crc ? millones(o.monto_vigente_crc) : "No es público", cambioMonto ? `Era ${millones(o.monto_original_crc)}` : "")}
+  ${terminada && recepcion ? datoClave("Entregada", fechaLarga(recepcion.fecha)) : datoClave("Entrega prevista", o.fecha_fin_vigente ? fechaLarga(o.fecha_fin_vigente) : "No es pública", o.prorroga_reciente ? "Con prórroga reciente" : "")}
+  ${datoClave("Avance reportado", tieneAvance ? `${num(o.avance_reportado_pct, 0)} %` : "Sin informes", tieneAvance ? `Informe del ${fecha(o.fecha_ultimo_informe)}` : "")}
+</dl>`;
 const secCabeza = html`<header class="fc-hero tarjeta">
   <div class="fc-hero-titulo">
     <div class="fc-etiquetas">${etiqueta}${chipEstado(estado)}</div>
     <h1>${o.nombre}</h1>
     <p class="fc-lugar">${o.canton}, ${o.provincia} · ${o.institucion_ejecutora}</p>
   </div>
+  ${secClave}
   <section class=${`fc-respuesta fc-${tono}`} aria-label="Respuesta rápida">
     <span class="fc-respuesta-icono" aria-hidden="true">${ICONO_TONO[tono]}</span>
     <div>
@@ -154,8 +167,15 @@ const tira = html`<div class="fc-semanas" role="group" aria-label="Actividad por
   b.onclick = () => verSemana(s, b);
   return b;
 })}</div>`;
+// El título dice la conclusión, no solo el tema (títulos activos)
+const nActivas = semanas.filter((s) => s.estado_semana === "actividad").length;
+const nSinDatosSem = semanas.filter((s) => s.estado_semana === "sin_datos").length;
+const tituloSemanas = !semanas.length ? "Sin semanas con datos de la cámara"
+  : semanas.every((s) => s.estado_semana === "terminada") ? `Obra terminada: en las últimas ${semanas.length} semanas ya no se espera trabajo`
+  : semanas.length === 1 ? (nActivas ? "Hubo trabajo en la última semana" : "No hubo trabajo en la última semana")
+  : `Hubo trabajo en ${nActivas} de las últimas ${plural(semanas.length, "semana", "semanas")}` + (nSinDatosSem ? ` (${nSinDatosSem} sin datos de la cámara)` : "");
 const secSemanas = html`<section class="fc-bloque tarjeta">
-  <h2>Últimas ${semanas.length} semanas</h2>
+  <h2>${tituloSemanas}</h2>
   ${tira}
   <div class="fc-fechas"><span>${semanas.length ? fecha(semanas[0].semana) : ""}</span><span>${fecha(corte)}</span></div>
   <p class="fc-leyenda"><span class="fc-m fc-actividad"></span> hubo trabajo <span class="fc-m fc-sin_actividad"></span> sin trabajo <span class="fc-m fc-sin_datos"></span> sin datos${semanas.some((s) => s.estado_semana === "terminada") ? html` <span class="fc-m fc-terminada"></span> terminada` : ""}</p>
@@ -165,19 +185,23 @@ const secSemanas = html`<section class="fc-bloque tarjeta">
 
 ```js
 // 4 · Etapas de la obra
-const hoy = new Date();
+// Se comparan con la fecha de corte de los datos (no con el reloj de quien mira), igual que el resto de la ficha
+const hoy = new Date(corte);
 const etapas = hitos.filter((d) => d.obra_id === obraId).sort((a, b) => a.fecha_prevista - b.fecha_prevista)
   .map((h) => ({...h, estado: h.fecha_cumplido ? "cumplida" : h.fecha_prevista < hoy ? "atrasada" : "pendiente"}));
 const ICONO = {cumplida: "✓", atrasada: "!", pendiente: "○"};
 function lineaEtapas() {
   const fechas = etapas.flatMap((h) => [h.fecha_prevista, h.fecha_cumplido].filter(Boolean));
   const ini = d3.min([...fechas, hoy]), fin = d3.max([...fechas, hoy]);
-  const x = (d) => `${(100 * (d - ini)) / (fin - ini || 1)}%`;
+  const posicion = (d) => (100 * (d - ini)) / (fin - ini || 1);
+  const x = (d) => `${posicion(d)}%`;
+  // La etiqueta del corte se alinea hacia adentro cuando cae cerca de un borde, para que no se salga
+  const lado = posicion(hoy) > 80 ? " fc-hoy-der" : posicion(hoy) < 20 ? " fc-hoy-izq" : "";
   return html`<div class="fc-linea" aria-hidden="true">
     <span class="fc-linea-base"></span>
     <span class="fc-linea-hecha" style=${`width: ${x(hoy)}`}></span>
     ${etapas.map((h) => html`<span class=${`fc-hito fc-hito-${h.estado}`} style=${`left: ${x(h.fecha_cumplido ?? h.fecha_prevista)}`} title=${h.hito}>${ICONO[h.estado]}</span>`)}
-    <span class="fc-hoy" style=${`left: ${x(hoy)}`}><span>hoy</span></span>
+    <span class=${`fc-hoy${lado}`} style=${`left: ${x(hoy)}`}><span>datos al ${fecha(hoy)}</span></span>
   </div>
   <div class="fc-linea-fechas"><span>${fecha(ini)}</span><span>${fecha(fin)}</span></div>`;
 }
@@ -221,7 +245,7 @@ const secContrato = html`<section class="fc-bloque tarjeta fc-contrato">
 ```js
 // 3 · Fotos: las de la cámara (piloto real) o las de referencia registradas en la hoja
 const fotos = real
-  ? d3.groups(evidencia.filter((d) => d.obra_id === obraId && d.foto), (d) => d.foto).map(([foto, filas]) => ({
+  ? d3.groups((await archivoEvidencia.csv({typed: true})).filter((d) => d.obra_id === obraId && d.foto), (d) => d.foto).map(([foto, filas]) => ({
       clave: foto, fecha: new Date(String(filas[0].fecha_hora).replace(" ", "T") + "Z"), src: FOTOS_PILOTO[foto],
       pie: d3.rollups(filas.filter((d) => d.clase), (v) => v.length, (d) => d.clase).map(([c, n]) => `${n} ${n === 1 ? c.toLowerCase() : c.toLowerCase() + (/[aeiou]$/.test(c.toLowerCase()) ? "s" : "es")}`).join(", "),
       fuente: "camara dIAra"
@@ -231,23 +255,27 @@ const dosDigitos = (n) => String(n).padStart(2, "0");
 const etiquetaFoto = (f) => `${fecha(f.fecha)}${real ? `, ${dosDigitos(f.fecha.getUTCHours())}:${dosDigitos(f.fecha.getUTCMinutes())}` : ""}`;
 const elegirA = Inputs.select(fotos, {label: "Foto 1", format: etiquetaFoto, value: fotos[0]});
 const elegirB = Inputs.select(fotos, {label: "Foto 2", format: etiquetaFoto, value: fotos.at(-1)});
-async function marco(f) {
+async function marco(f, {conReferencia = true} = {}) {
   if (!f) return html`<figure class="fc-foto fc-foto-vacia"><div>Sin foto</div></figure>`;
   const src = typeof f.src === "string" ? f.src : await f.src.url();
   // Crédito que piden las licencias libres (autor, licencia y enlace a la fuente)
   const credito = f.autor ? html`<span class="fc-credito">Foto: ${f.pagina_fuente ? html`<a href=${f.pagina_fuente} target="_blank" rel="noopener">${f.autor}</a>` : f.autor}${f.licencia ? `, ${f.licencia}` : ""}</span>` : "";
-  return html`<figure class="fc-foto"><img src=${src} alt=${f.pie || `Foto de la obra, ${fecha(f.fecha)}`} loading="lazy"><figcaption><b>${etiquetaFoto(f)}</b>${f.pie ? ` · ${f.pie}` : ""}${credito}</figcaption></figure>`;
+  // Las obras de prueba usan fotos de otras obras parecidas: se dice siempre, para que nadie las tome como evidencia
+  const referencia = real || !conReferencia ? "" : html`<span class="fc-ref">Foto de referencia de otra obra: no es de la cámara.</span>`;
+  const alt = real ? (f.pie || `Foto de la cámara, ${fecha(f.fecha)}`) : `Foto de referencia de otra obra${f.pie ? `: ${f.pie}` : ""}`;
+  return html`<figure class="fc-foto"><img src=${src} alt=${alt} loading="lazy"><figcaption><b>${etiquetaFoto(f)}</b>${f.pie ? ` · ${f.pie}` : ""}${referencia}${credito}</figcaption></figure>`;
 }
 const aviso = real
   ? "Fotos reales de la cámara del piloto, con las personas difuminadas. Lo que dice cada foto es lo que detectó la IA."
   : fotos.length
-  ? ""
+  ? "Obra de prueba: estas fotos son de otras obras parecidas y solo ilustran cada etapa. Lo que dice LupIA sobre el trabajo sale de los datos de la cámara, no de estas fotos."
   : "";
 // Al cambiar de foto solo se reemplaza esa foto, sin redibujar la página
-const cajaA = html`<div>${await marco(elegirA.value)}</div>`;
-const cajaB = html`<div>${await marco(elegirB.value)}</div>`;
-elegirA.addEventListener("input", async () => cajaA.replaceChildren(await marco(elegirA.value)));
-elegirB.addEventListener("input", async () => cajaB.replaceChildren(await marco(elegirB.value)));
+// En la comparación el aviso de abajo ya explica que son fotos de referencia: no se repite en cada foto
+const cajaA = html`<div>${await marco(elegirA.value, {conReferencia: false})}</div>`;
+const cajaB = html`<div>${await marco(elegirB.value, {conReferencia: false})}</div>`;
+elegirA.addEventListener("input", async () => cajaA.replaceChildren(await marco(elegirA.value, {conReferencia: false})));
+elegirB.addEventListener("input", async () => cajaB.replaceChildren(await marco(elegirB.value, {conReferencia: false})));
 const secFotos = html`<section class="fc-bloque tarjeta">
   <h2>Compare dos fotos</h2>
   ${fotos.length
@@ -261,11 +289,17 @@ const secFotos = html`<section class="fc-bloque tarjeta">
 ```js
 // Lo que ha reportado la comunidad (registro, pestaña reportes_ciudadanos), como en Tracka o Sumbong sa Pangulo
 const reportesOrden = [...reportes].sort((a, b) => b.fecha - a.fecha);
+// Cerrar el ciclo: cada reporte muestra si la institución respondió (como en FixMyStreet) o cuántos días lleva sin respuesta
+function estadoReporte(r) {
+  if (r.respuesta) return html`<p class="fc-resp"><b>${r.fecha_respuesta ? `Respuesta del ${fecha(r.fecha_respuesta)}` : "Respuesta"}:</b> ${r.respuesta}</p>`;
+  const dias = Math.round((new Date(corte) - r.fecha) / DIA);
+  return html`<p class="fc-sinresp">Sin respuesta registrada${dias > 0 ? ` en ${plural(dias, "día", "días")}` : ""}.</p>`;
+}
 const secComunidad = html`<section class="fc-bloque tarjeta">
   <h2>Lo que ha reportado la comunidad</h2>
   ${reportesOrden.length
-    ? html`<ul class="fc-comunidad">${reportesOrden.map((r) => html`<li><span>${fecha(r.fecha)}</span><q>${r.detalle}</q></li>`)}</ul>
-      <p class="fc-tenue fc-nota-barras">Reportes anotados en el registro de LupIA.</p>`
+    ? html`<ul class="fc-comunidad">${reportesOrden.map((r) => html`<li><span>${fecha(r.fecha)}</span><div><q>${r.detalle}</q>${estadoReporte(r)}</div></li>`)}</ul>
+      <p class="fc-tenue fc-nota-barras">Reportes anotados en el registro de LupIA, con la respuesta de la institución cuando la hay.</p>`
     : html`<p class="fc-tenue">No hay reportes de la comunidad anotados para esta obra.</p>`}
 </section>`;
 ```
@@ -274,7 +308,7 @@ const secComunidad = html`<section class="fc-bloque tarjeta">
 // 6 · Qué no se puede concluir (cambia según la situación de la obra)
 const notas = [];
 if (terminada) notas.push("Que la cámara ya no vea trabajo es lo esperado en una obra terminada; no dice nada sobre la calidad de lo construido.");
-else if (sinCamara) notas.push(`No sabemos si hubo trabajo desde el ${fechaTexto(siguienteDia(ultimoConDatos))}: sin fotos no se puede afirmar que la obra esté detenida ni que avance.`);
+else if (sinCamara) notas.push(`${ultimoConDatos ? `Después del ${fechaTexto(ultimoConDatos)} no hay fotos` : "No hay fotos"}: no se puede afirmar que la obra esté detenida ni que avance.`);
 else if (parada) notas.push("Que la cámara no vea trabajo no prueba que la obra esté abandonada: puede haber lluvia, un feriado, una suspensión autorizada o trabajo fuera del ángulo de la cámara.");
 else notas.push("Ver personas o máquinas no mide cuánto avanzó la obra: el avance lo informa la ejecutora.");
 if (resumen.metodo?.sensibilidad_modelo) notas.push(`La IA no ve todo: en el piloto encontró unas ${Math.round(100 * resumen.metodo.sensibilidad_modelo)} de cada 100 personas y máquinas que se veían en las fotos.`);
@@ -289,7 +323,7 @@ const secLimites = html`<section class="fc-bloque tarjeta fc-limites">
 
 ```js
 // 7 · Reportar algo que vi: se arma el texto con la evidencia y se envía por el canal oficial de la CGR
-const queVio = Inputs.textarea({label: "¿Qué vio en la obra?", placeholder: "Por ejemplo: desde hace dos semanas no hay trabajadores y la zanja sigue abierta.", rows: 3});
+const queVio = Inputs.textarea({label: "Escriba lo que vio (se agrega al reporte de abajo)", placeholder: "Por ejemplo: desde hace dos semanas no hay trabajadores y la zanja sigue abierta.", rows: 3});
 const atrasadas = etapas.filter((h) => h.estado === "atrasada");
 const armarReporte = (vio) => [
   `Reporte sobre: ${o.nombre}, ${o.canton} (${o.provincia})`,
@@ -321,10 +355,12 @@ const canal = resumen.canal_denuncias;
 const secReporte = html`<section class="fc-bloque tarjeta fc-reportar" id="reportar">
   <h2>Reportar algo que vi</h2>
   <p>LupIA no recibe denuncias: le arma el reporte con la evidencia para que lo envíe por el canal oficial de la Contraloría. Así su reporte llega con fechas y datos, no solo con lo que vio.</p>
-  <p class="fc-tenue fc-paso">Toque una opción o escriba con sus palabras:</p>
+  <p class="fc-paso"><span class="fc-paso-num" aria-hidden="true">1</span> Toque una opción o escriba con sus palabras:</p>
   ${opcionesVio}
   ${queVio}
+  <p class="fc-paso"><span class="fc-paso-num" aria-hidden="true">2</span> Así queda su reporte, con la evidencia de LupIA:</p>
   ${textoReporte}
+  <p class="fc-paso"><span class="fc-paso-num" aria-hidden="true">3</span> Cópielo y péguelo en la Denuncia Digital de la Contraloría. LupIA no lo envía por usted.</p>
   <p class="fc-consejo"><b>Consejo:</b> si puede, tome fotos con la fecha visible y adjúntelas en la Denuncia Digital. Son la mejor evidencia.</p>
   <div class="fc-acciones">${copiar}<a class="fc-boton fc-secundario" href=${canal.url} target="_blank" rel="noopener">Ir a Denuncia Digital de la CGR ↗</a></div>
   <p class="fc-tenue">También puede llamar al ${canal.telefono}. Sus datos personales los maneja la Contraloría, no LupIA.</p>
@@ -332,7 +368,7 @@ const secReporte = html`<section class="fc-bloque tarjeta fc-reportar" id="repor
 ```
 
 ```js
-// Detalle para fiscalización (plegable)
+// Detalle para fiscalización (plegable). Plot se descarga solo al abrirlo: así la ficha carga más rápido en el celular
 const serieObra = serie.filter((d) => d.obra_id === obraId);
 const ultimoPagado = serieObra.filter((d) => d.serie === "pagado").at(-1);
 const NOMBRES_SERIE = {previsto: "Previsto", reportado: "Reportado", pagado: "Pagado"};
@@ -341,20 +377,33 @@ const porSerie = (k) => serieObra.filter((d) => d.serie === k).sort((a, b) => a.
 const finalesSerie = ["previsto", "reportado", "pagado"].map((k) => ({...porSerie(k).at(-1), nombre: NOMBRES_SERIE[k]}))
   .filter((d) => d.fecha).sort((a, b) => b.valor_pct - a.valor_pct);
 for (let i = 0; i < finalesSerie.length; i++) finalesSerie[i].y = i ? Math.min(finalesSerie[i].valor_pct, finalesSerie[i - 1].y - 8) : finalesSerie[i].valor_pct;
-const secFisc = html`<details class="fc-fiscalizacion tarjeta">
-  <summary>Detalle para fiscalización</summary>
-  <div class="fc-fisc-cuerpo">
-    ${serieObra.length ? Plot.plot({
-      style: estiloPlot, height: 230, marginLeft: 40, marginRight: 80, width: Math.min(width, 760),
+const anchoGrafico = Math.min(width, 760);
+const cajaGrafico = html`<div class="fc-fisc-grafico">${serieObra.length
+  ? html`<p class="fc-tenue">Cargando el gráfico…</p>`
+  : html`<p class="fc-tenue">Sin cronograma, informes ni pagos registrados.</p>`}</div>`;
+async function dibujarGrafico() {
+  try {
+    const Plot = await import("npm:@observablehq/plot");
+    cajaGrafico.replaceChildren(Plot.plot({
+      style: estiloPlot, height: 230, marginLeft: 40, marginRight: 80, width: anchoGrafico,
       y: {domain: [0, 100], label: "% de avance o del monto", labelArrow: "up", grid: true},
-      x: {type: "utc", label: null, tickFormat: fecha, ticks: width < 560 ? 4 : 6},
+      x: {type: "utc", label: null, tickFormat: fecha, ticks: anchoGrafico < 560 ? 4 : 6},
       marks: [
         Plot.line(porSerie("previsto"), {x: "fecha", y: "valor_pct", stroke: "var(--trazo)", strokeWidth: 1.75, strokeDasharray: "5,4"}),
         Plot.line(porSerie("pagado"), {x: "fecha", y: "valor_pct", stroke: "var(--grafito)", strokeWidth: 1.5, curve: "step-after"}),
         Plot.line(porSerie("reportado"), {x: "fecha", y: "valor_pct", stroke: "var(--tinta)", strokeWidth: 2.25}),
         Plot.text(finalesSerie, {x: "fecha", y: "y", text: "nombre", dx: 8, textAnchor: "start", fill: "var(--tinta)", fontWeight: 600})
       ]
-    }) : html`<p class="fc-tenue">Sin cronograma, informes ni pagos registrados.</p>`}
+    }));
+  } catch {
+    cajaGrafico.replaceChildren(html`<p class="fc-tenue">No se pudo cargar el gráfico. Revise la conexión y vuelva a abrir este detalle.</p>`);
+    delete secFisc.dataset.dibujado;
+  }
+}
+const secFisc = html`<details class="fc-fiscalizacion tarjeta">
+  <summary>Detalle para fiscalización</summary>
+  <div class="fc-fisc-cuerpo">
+    ${cajaGrafico}
     <dl class="fc-datos">
       <div><dt>Pagado</dt><dd>${ultimoPagado ? `${num(ultimoPagado.valor_pct, 0)} % del monto al ${fecha(ultimoPagado.fecha)}` : "Sin pagos registrados"}</dd></div>
       <div><dt>Contratista</dt><dd>${o.contratista || "No es público"}</dd></div>
@@ -364,9 +413,13 @@ const secFisc = html`<details class="fc-fiscalizacion tarjeta">
     <p><a href="./obra.html?id=${obraId}">Abrir el análisis completo para fiscalización →</a></p>
   </div>
 </details>`;
+secFisc.addEventListener("toggle", () => {
+  if (secFisc.open && serieObra.length && !secFisc.dataset.dibujado) { secFisc.dataset.dibujado = "si"; dibujarGrafico(); }
+});
 ```
 
 ```js
+document.getElementById("cargando")?.remove();
 display(html`<div class="ficha-c">
   <div class="fc-arriba"><a class="fc-volver" href="./index.html">← Todas las obras</a>${selector}</div>
   ${secCabeza}

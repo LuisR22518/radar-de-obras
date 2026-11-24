@@ -880,3 +880,100 @@ observablehq-loading { visibility: hidden; }
 /* Accesibilidad (revisión con axe, WCAG 2 AA): enlaces subrayados dentro del texto y pies de foto con buen contraste */
 .portada-nota a, .como-mas a, .aviso a, .fc-credito a, .nota-tabla a, .tenue a { text-decoration: underline; }
 figcaption, .fc-foto figcaption { color: var(--grafito); }
+
+/* --- Mejoras de la investigación de noviembre: estructura, confianza y celular ------------- */
+/* Aviso mientras llegan los datos: en una red lenta la página no queda en blanco */
+.cargando { display: flex; align-items: center; gap: 0.6rem; color: var(--grafito); font-size: var(--t-sm); margin: 1rem 0 2rem; max-width: none; }
+.cargando::before { content: ""; flex: none; width: 1rem; height: 1rem; border-radius: 50%; border: 2px solid var(--linea); border-top-color: var(--tinta); animation: lupia-girar 0.9s linear infinite; }
+@keyframes lupia-girar { to { transform: rotate(360deg); } }
+
+/* Obras cerca de mí */
+.portada-cerca { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin: 0.85rem 0 0; }
+.boton-cerca svg { flex: none; }
+.boton.secundario.boton-cerca[aria-pressed="true"] { background: var(--c-trabajo-suave); border-color: var(--c-trabajo-borde); color: var(--c-trabajo-texto); }
+.boton-cerca:disabled { opacity: 0.7; cursor: progress; }
+.cerca-nota { font-size: var(--t-sm); color: var(--grafito); flex: 1 1 16rem; }
+.obra-distancia { color: var(--tinta); font-weight: 700; }
+
+/* Las fotos de las obras de prueba son de referencia: se rotulan en la tarjeta y en la ficha */
+.obra-foto { position: relative; }
+.obra-ref { position: absolute; left: 4px; bottom: 4px; font-size: 0.68rem; font-weight: 700; line-height: 1; color: #fff; background: rgba(15, 34, 53, 0.88); padding: 3px 5px; border-radius: 4px; }
+.fc-ref { display: block; font-weight: 650; color: var(--tinta); }
+
+/* Leyenda de los cuadros semanales, junto a las tarjetas que los usan */
+.lista-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.75rem; font-size: var(--t-xs); color: var(--grafito); margin: 0 0 1rem; }
+.lista-leyenda .leyenda { margin: 0; font-size: var(--t-xs); gap: 0.3rem 0.8rem; }
+
+/* En celular: lista o mapa, con un control de dos opciones; la lista va primero */
+.vista-movil { display: none; }
+@media (max-width: 900px) {
+  .vista-movil { display: inline-flex; justify-self: start; gap: 2px; padding: 3px; border: 1px solid var(--borde-control); border-radius: 999px; background: var(--papel); }
+  .vista-movil button { font: 650 var(--t-sm) var(--sans-serif); color: var(--tinta); background: transparent; border: 0; border-radius: 999px; padding: 0.45rem 1.15rem; cursor: pointer; }
+  .vista-movil button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); }
+  html:not([data-vista-obras="mapa"]) .inicio-cuerpo > .caja-mapa { display: none; }
+  html[data-vista-obras="mapa"] .inicio-cuerpo > .caja-lista { display: none; }
+}
+/* En computadora el mapa acompaña al bajar por la lista */
+@media (min-width: 901px) {
+  .inicio-cuerpo > .caja-mapa, .tablero > .caja-mapa { position: sticky; top: 1rem; }
+}
+
+/* Ficha: costo, entrega y avance reportado en la cabecera */
+.fc-hero { grid-template-areas: "titulo foto" "respuesta foto" "clave foto" "detalle foto"; }
+.fc-clave { grid-area: clave; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem 1rem; margin: 0; padding: 0.85rem 0; border-top: 1px solid var(--linea); border-bottom: 1px solid var(--linea); }
+.fc-clave div { min-width: 0; }
+.fc-clave dt { font-size: var(--t-xs); font-weight: 700; color: var(--grafito); }
+.fc-clave dd { margin: 0.1rem 0 0; font-weight: 750; font-size: 1.02rem; line-height: 1.3; }
+.fc-clave small { display: block; font-weight: 500; font-size: var(--t-xs); color: var(--grafito); }
+@media (max-width: 760px) { .fc-hero { grid-template-areas: "titulo" "respuesta" "clave" "foto" "detalle"; } }
+@media (max-width: 480px) { .fc-clave { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Etapas: la marca del corte de datos no se sale de la tarjeta */
+.fc-hoy span { white-space: nowrap; }
+.fc-hoy.fc-hoy-der span { left: auto; right: 0; transform: none; }
+.fc-hoy.fc-hoy-izq span { left: 0; transform: none; }
+
+/* Reportes de la comunidad: respuesta de la institución o días sin respuesta */
+.fc-comunidad li > div { min-width: 0; }
+.fc-resp, .fc-sinresp { margin: 0.3rem 0 0; font-size: var(--t-sm); max-width: none; }
+.fc-resp { color: var(--c-trabajo-texto); }
+.fc-sinresp { color: var(--grafito); }
+
+/* Reportar: tres pasos numerados y el texto del reporte en la letra de la página */
+.fc-paso { display: flex; align-items: center; gap: 0.5rem; font-size: var(--t-sm); font-weight: 650; color: var(--tinta); margin: 1rem 0 0.5rem; max-width: none; }
+.fc-paso-num { flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: grid; place-items: center; font-size: var(--t-xs); font-weight: 800; background: var(--tinta); color: var(--papel); }
+.fc-texto-reporte { font-family: inherit; line-height: 1.5; }
+
+/* Análisis de obra: ir a la ficha ciudadana y respuesta corta a la pregunta de la pestaña */
+.ficha-barra .ver-ficha { font-size: var(--t-sm); font-weight: 600; color: var(--tinta); text-decoration: underline; text-underline-offset: 0.2em; margin-right: auto; }
+.respuesta-corta { font-size: 1.05rem; font-weight: 650; line-height: 1.45; background: var(--niebla); border-left: 4px solid var(--tinta); padding: 0.75rem 1rem; border-radius: 0 10px 10px 0; max-width: 78ch; }
+
+/* Para la Contraloría: tabla para comparar las señales, ordenable por columna */
+.comparar { margin-top: 1.5rem; background: var(--papel); border: 1px solid var(--linea); border-radius: var(--radio); box-shadow: var(--sombra); padding: 1.1rem 1.25rem; }
+.comparar h2 { font-size: var(--t-lg); margin: 0 0 0.35rem; }
+.comparar > p { max-width: none; margin: 0 0 0.75rem; font-size: var(--t-sm); }
+.tabla-desliza { overflow-x: auto; }
+.tabla-desliza:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+table.senales-tabla { width: 100%; min-width: 880px; max-width: none; border-collapse: collapse; font-size: var(--t-sm); }
+table.senales-tabla th { text-align: left; vertical-align: bottom; padding: 0 0.6rem 0.35rem 0; border-bottom: 1px solid var(--trazo); }
+table.senales-tabla th button.ordenar { font: 650 var(--t-xs) var(--sans-serif); color: var(--grafito); background: none; border: 0; padding: 0.25rem 0; cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 0.2em; }
+table.senales-tabla th[aria-sort="ascending"] button.ordenar, table.senales-tabla th[aria-sort="descending"] button.ordenar { color: var(--tinta); text-decoration-style: solid; }
+table.senales-tabla td { padding: 0.55rem 0.6rem 0.55rem 0; border-bottom: 1px solid var(--linea); vertical-align: top; }
+table.senales-tabla td a { color: var(--tinta); font-weight: 650; }
+table.senales-tabla td.con-alerta { font-weight: 700; color: var(--c-alerta-texto); }
+table.senales-tabla .barra { min-width: 130px; }
+.alerta-mini { display: inline-grid; place-items: center; width: 1.05rem; height: 1.05rem; border-radius: 50%; background: var(--c-alerta); color: #fff; font-size: 0.7rem; font-weight: 800; vertical-align: 0.05em; }
+/* Cómo funciona: índice corto de la página */
+.indice { font-size: var(--t-sm); color: var(--grafito); max-width: none; }
+.indice a { text-decoration: underline; }
+/* Los cuadros semanales de la tarjeta nunca se recortan */
+.obra-semanas svg { flex: none; }
+/* En celular las cuatro cifras ocupan menos alto, para llegar antes a las obras */
+@media (max-width: 760px) {
+  .cifras-fila { gap: 0.5rem; margin-bottom: 1.25rem; }
+  .cifra-tarjeta { padding: 0.6rem 0.75rem; }
+  .cifra-valor { font-size: 1.6rem; }
+}
+/* La tabla de señales se desliza dentro de su tarjeta sin ensanchar la página */
+.comparar { min-width: 0; max-width: 100%; }
+.tabla-desliza { position: relative; max-width: 100%; }

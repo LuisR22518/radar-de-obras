@@ -1,9 +1,7 @@
 // Piezas compartidas de LupIA: formatos, estados, señales y pequeños gráficos en tinta.
-import * as Plot from "npm:@observablehq/plot";
+// Plot no se importa aquí sino en graficos.js: así el inicio y las páginas sin gráficos de Plot cargan menos.
 import {html, svg} from "npm:htl";
 import * as d3 from "npm:d3";
-
-export {Plot};
 
 export const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const MESES_LARGOS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -87,7 +85,8 @@ export function pulso(semanas, {celda = 11, alto = 18, sep = 3} = {}) {
   const activas = semanas.filter((s) => s.estado_semana === "actividad").length;
   const sinDatos = semanas.filter((s) => s.estado_semana === "sin_datos").length;
   const etiqueta = `Últimas ${n} semanas: ${activas} con actividad` + (sinDatos ? `, ${sinDatos} sin datos` : "");
-  return svg`<svg width=${n * (celda + sep)} height=${alto} role="img" aria-label=${etiqueta}>${semanas.map((s, i) => svg`<rect
+  // Con viewBox y ancho máximo, la tira se encoge en pantallas angostas en vez de salirse
+  return svg`<svg width=${n * (celda + sep)} height=${alto} viewBox="0 0 ${n * (celda + sep)} ${alto}" style="max-width: 100%; height: auto" role="img" aria-label=${etiqueta}>${semanas.map((s, i) => svg`<rect
     x=${i * (celda + sep) + 0.5} y="0.5" width=${celda} height=${alto - 1} rx="2"
     fill=${ESTADOS[s.estado_semana].fill}
     stroke=${ESTADOS[s.estado_semana].stroke} stroke-width="1.5"><title>${`Semana del ${fecha(s.semana)}: ${ESTADOS[s.estado_semana].label.toLowerCase()}` + (s.con_explicacion ? " (con explicación)" : "")}</title></rect>${
@@ -115,14 +114,6 @@ export function asegurarRayado() {
       <rect width="5" height="5" fill="var(--papel)"/><line x1="0" y1="0" x2="0" y2="5" stroke="var(--trazo)" stroke-width="1.6"/>
     </pattern></defs></svg>`;
   document.body.appendChild(defs);
-}
-
-// Gráfico de Plot sin las etiquetas ARIA inválidas que Plot pone en sus grupos internos.
-export function grafico(opciones) {
-  const figura = Plot.plot(opciones);
-  figura.querySelectorAll("g[aria-label]").forEach((g) => g.removeAttribute("aria-label"));
-  figura.querySelectorAll("svg").forEach((s) => s.setAttribute("aria-hidden", "true"));
-  return figura;
 }
 
 // Estilo común para los gráficos de Plot.
@@ -211,9 +202,19 @@ export function leyendaObra() {
   return html`<div class="leyenda">${Object.entries(ESTADO_OBRA).map(([k, e]) => html`<span>${iconoEstado(k, null, 12)}${e.label}</span>`)}</div>`;
 }
 
+// Distancia en línea recta entre dos puntos (fórmula del haversine), en kilómetros
+export function distanciaKm(a, b) {
+  const rad = (g) => (g * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+}
+export const textoDistancia = (km) => (km < 1 ? "a menos de 1 km" : `a ${num(km, km < 10 ? 1 : 0)} km`);
+
 // Mapa de Costa Rica con un punto por obra; cada punto lleva el número de la lista.
 // Minimalista: solo la silueta del país y un punto numerado por obra (Avance 2: mapa en escala de grises).
-export function mapaObras(pais, obras, {width = 420, activo = null} = {}) {
+// «enlace» decide adónde lleva cada punto: la ficha ciudadana (inicio) o el análisis del fiscalizador (Contraloría).
+export function mapaObras(pais, obras, {width = 420, activo = null, enlace = (o) => `./ficha.html?id=${o.obra_id}`} = {}) {
   const alto = Math.round(width * 0.82);
   const proy = d3.geoMercator().fitExtent([[10, 10], [width - 10, alto - 10]], pais);
   const camino = d3.geoPath(proy);
@@ -238,7 +239,7 @@ export function mapaObras(pais, obras, {width = 420, activo = null} = {}) {
   return html`<svg class="mapa" viewBox="0 0 ${width} ${alto}" width=${width} height=${alto} aria-hidden="true">
     ${svg`<path d=${camino(pais)} fill="var(--mapa-tierra)" stroke="none"/>
     ${puntos.map((p) => Math.hypot(p.x - p.x0, p.y - p.y0) > 2 ? svg`<line x1=${p.x0} y1=${p.y0} x2=${p.x} y2=${p.y} stroke="var(--trazo)" stroke-width="0.75" />` : "")}
-    ${puntos.map(({o, x, y}) => svg`<a href=${`./ficha.html?id=${o.obra_id}`} tabindex="-1" data-obra=${o.obra_id}
+    ${puntos.map(({o, x, y}) => svg`<a href=${enlace(o)} tabindex="-1" data-obra=${o.obra_id}
       class=${`pin ${o.estado}${activo && !activo.has(o.obra_id) ? " atenuado" : ""}`} transform=${`translate(${x - tam / 2},${y - tam / 2})`}>
       <title>${`${o.orden}. ${o.nombre} (${o.canton}): ${ESTADO_OBRA[o.estado].label.toLowerCase()}`}</title>
       ${iconoEstado(o.estado, o.orden, tam)}</a>`)}`}

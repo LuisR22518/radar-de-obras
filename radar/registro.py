@@ -1,7 +1,7 @@
 """Registro de obras: la base de datos propia de LupIA.
 
 La mantienen la gerencia y los encargados de actualización de obra (no el auditor) en una hoja de
-Google con una pestaña por tabla; GitHub la descarga cada 15 minutos a datos/registro/ (ver scripts/registro.py). Aquí se define qué columnas
+Google con una pestaña por tabla; GitHub la descarga varias veces al día a datos/registro/ (ver scripts/registro.py). Aquí se define qué columnas
 lleva cada tabla, cómo se leen y qué revisiones de calidad se le aplican.
 
 Dos niveles de problema:
@@ -54,6 +54,8 @@ TABLAS = {
     "reportes_ciudadanos": [
         ("obra_id", "texto", True), ("fecha", "fecha", True), ("tipo", "texto", True), ("descripcion", "texto", True),
         ("con_foto", "opcion:si|no", False), ("canal", "texto", False), ("actualizado_por", "texto", False),
+        # Cerrar el ciclo: qué respondió o hizo la institución, y cuándo (vacío si todavía no hay respuesta)
+        ("respuesta", "texto", False), ("fecha_respuesta", "fecha", False),
     ],
     # Configuración: se tocan poco
     "camaras": [
@@ -76,7 +78,7 @@ ALIMENTA = {
     "avance_reportado": "Lo que reporta la ejecutora (avance en %)",
     "eventos_contrato": "Costo, fecha de entrega y cambios al contrato",
     "pagos": "Detalle para fiscalización: cuánto se ha pagado",
-    "reportes_ciudadanos": "Lo que reporta la gente",
+    "reportes_ciudadanos": "Lo que reporta la gente y la respuesta de la institución",
     "camaras": "Las 8 semanas de actividad (qué cámara es de cada obra)",
     "feriados": "Que un feriado no cuente como día sin trabajo",
     "responsables": "Quién puede editar esta hoja",
@@ -161,6 +163,8 @@ DESCRIPCIONES = {
         "obra_id": "Código de la obra.", "fecha": "Fecha del reporte.", "tipo": "obra detenida, seguridad, calidad u otro.",
         "descripcion": "Lo que reporta la persona, en pocas palabras.", "con_foto": "si o no.",
         "canal": "Por dónde llegó (denuncia CGR, inspector ciudadano, etc.).",
+        "respuesta": "Qué respondió o hizo la institución ejecutora (por ejemplo, «Colocó señalización»). Vacío si todavía no hay respuesta: la ficha muestra cuántos días lleva sin respuesta.",
+        "fecha_respuesta": "Fecha de esa respuesta.",
     },
     "feriados": {"fecha": "Fecha del feriado (la de su disfrute, si se trasladó).", "nombre": "Nombre del feriado.",
                  "fuente": "De dónde sale (por ejemplo, comunicado del MTSS)."},
@@ -396,6 +400,14 @@ def _revisar(t: dict, problemas: list):
         for i in g.index[baja]:
             problemas.append(Problema("aviso", "avance_reportado", i + 2,
                                       f"Obra {oid}: el avance reportado baja respecto al informe anterior."))
+    rep = t["reportes_ciudadanos"]
+    for i, r in rep.iterrows():
+        if r["respuesta"] and pd.isna(r["fecha_respuesta"]):
+            problemas.append(Problema("aviso", "reportes_ciudadanos", i + 2, "Hay «respuesta» pero falta «fecha_respuesta»."))
+        if pd.notna(r["fecha_respuesta"]) and pd.notna(r["fecha"]) and r["fecha_respuesta"] < r["fecha"]:
+            problemas.append(Problema("error", "reportes_ciudadanos", i + 2, "«fecha_respuesta» es anterior a la fecha del reporte."))
+        if pd.notna(r["fecha_respuesta"]) and not r["respuesta"]:
+            problemas.append(Problema("aviso", "reportes_ciudadanos", i + 2, "Hay «fecha_respuesta» pero falta «respuesta»."))
     ev = t["eventos_contrato"]
     for i, e in ev.iterrows():
         if e["tipo"] == "prorroga" and pd.isna(e["dias_prorroga"]):

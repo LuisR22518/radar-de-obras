@@ -113,6 +113,11 @@ def main():
     terminadas = man[man["fase"] == "terminada"]
     revisar("Mantenimiento: una obra terminada no tiene informes ni pagos vencidos",
             not (terminadas["informe_vencido"] | terminadas["pago_vencido"]).any())
+    # Cerrar el ciclo: la ficha muestra la respuesta a cada reporte ciudadano, o los días que lleva sin respuesta
+    ev = pd.read_csv(C.SALIDAS / "eventos.csv", parse_dates=["fecha", "fecha_respuesta"])
+    rep = ev[ev["categoria"] == "ciudadania"]
+    revisar("Los reportes ciudadanos llevan su respuesta, y ninguna respuesta es anterior a su reporte",
+            {"respuesta", "fecha_respuesta"} <= set(ev.columns) and not (rep["fecha_respuesta"] < rep["fecha"]).any())
 
     for descripcion, ok in resultados:
         print(("OK    " if ok else "FALLA ") + descripcion)
