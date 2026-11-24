@@ -10,8 +10,8 @@ const semanal = await FileAttachment("data/matriz_semanal.csv").csv({typed: true
 const fotos = await FileAttachment("data/fotos.csv").csv({typed: true});
 const pais = await FileAttachment("data/costa-rica.json").json();
 const resumen = await FileAttachment("data/resumen.json").json();
-// Foto real de la cámara del piloto (personas difuminadas), para la obra con datos de dIAra
-const fotoPiloto = await FileAttachment("data/fotos-piloto/20240319-090439.jpg").url();
+// Foto real de la cámara del piloto (personas difuminadas), en miniatura, para la obra con datos de dIAra
+const fotoPiloto = await FileAttachment("data/miniatura-piloto.jpg").url();
 ```
 
 <section class="portada" aria-labelledby="titulo">
@@ -180,7 +180,7 @@ display(html`<div class="inicio-cuerpo" id="obras">
   <div class="vista-movil" role="group" aria-label="Ver las obras como">${botonVista("lista", "Lista")}${botonVista("mapa", "Mapa")}</div>
   <aside class="tarjeta caja-mapa" aria-label="Mapa de las obras">
     <h2 class="tarjeta-titulo">Dónde están</h2>
-    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 520), activo}))}
+    <div class="mapa-espacio" style="--mapa-ancho: 520px">${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 520), activo}))}</div>
     ${leyendaObra()}
     <p class="mapa-nota">Toque un punto para abrir la obra. El número es el mismo de la lista.</p>
   </aside>

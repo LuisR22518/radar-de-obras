@@ -3,7 +3,8 @@ title: Análisis de obra
 ---
 
 ```js
-import {Plot, grafico} from "./components/graficos.js";
+// Plot (la librería de gráficos) se carga solo al abrir «Actividad diaria» o «Avance y pagos»: así el análisis abre más rápido
+const cargarGraficos = () => import("./components/graficos.js");
 import {fecha, fechaLarga, fechaTexto, hora, num, millones, plural, ESTADOS, escalaEstados, leyendaEstados, SENALES, razones, pulso, ESTADO_OBRA, ordenar, razonesCortas, iconoEstado, asegurarRayado, estiloPlot, esReal, tieneDato} from "./components/lupia.js";
 asegurarRayado();
 const senales = await FileAttachment("data/senales.csv").csv({typed: true});
@@ -43,6 +44,8 @@ const obraId = Generators.input(selector);
 ```js
 history.replaceState(null, "", `?id=${obraId}${location.hash}`);
 document.getElementById("cargando")?.remove();
+// La barra, la cabeza, las pestañas y el reporte aparecen juntos con sus datos: así nada salta al cargar
+document.querySelectorAll(".espera").forEach((el) => el.classList.remove("espera"));
 const o = porId.get(obraId);
 const ficha = fichaPorId.get(obraId);
 const siguiente = lista[o.orden % lista.length];
@@ -88,13 +91,13 @@ const noSePuede = [
 const sinDato = () => html`<span class="tenue">Sin dato</span>`;
 ```
 
-<div class="ficha-barra no-imprimir">
+<div class="ficha-barra no-imprimir espera">
   <a class="volver" href="./contraloria.html">Volver a la lista de la Contraloría</a>
   ${html`<a class="ver-ficha" href=${`./ficha.html?id=${obraId}`}>Ver cómo la ve la ciudadanía</a>`}
   <div class="ir">${selector}${html`<a class="boton secundario" href=${`./obra.html?id=${siguiente.obra_id}`}>Siguiente obra</a>`}</div>
 </div>
 
-<section class="ficha-cabeza" aria-labelledby="nombre-obra">
+<section class="ficha-cabeza espera" aria-labelledby="nombre-obra">
   <div>
     <p class="estado">${iconoEstado(o.estado, o.orden, 24)}${o.estado === "revisar" ? html`<span class="marca">${ESTADO_OBRA[o.estado].label}</span>` : ESTADO_OBRA[o.estado].label}<span class="posicion">Número ${o.orden} de ${lista.length} en la lista</span></p>
     <h1 id="nombre-obra">${o.nombre}</h1>
@@ -153,9 +156,9 @@ for (const k of claves) {
 history.replaceState(null, "", `${location.search}${pestana === "resumen" ? "" : `#${pestana}`}`);
 ```
 
-<div class="contenedor-pestanas">${pestanas}</div>
+<div class="contenedor-pestanas espera">${pestanas}</div>
 
-<section class="pestana" id="p-resumen" role="tabpanel" aria-labelledby="t-resumen">
+<section class="pestana espera" id="p-resumen" role="tabpanel" aria-labelledby="t-resumen">
   <h2>Lo esencial</h2>
   <p>Lo que los datos permiten afirmar y lo que no, antes de abrir el detalle.</p>
   <div class="saber">
@@ -171,9 +174,11 @@ history.replaceState(null, "", `${location.search}${pestana === "resumen" ? "" :
 
 ```js
 const CATEGORIA = {contrato: "Evento del contrato", ciudadania: "Reporte ciudadano", feriado: "Feriado"};
-function lineaTiempo(width) {
+async function lineaTiempo(width) {
+  const {Plot, grafico} = await cargarGraficos();
   const datos = dias.map((d) => ({...d, estadoVista: ESTADOS[d.fase === "terminada" && d.estado !== "actividad" ? "terminada" : d.estado].label}));
-  const ev = eventos.filter((e) => e.obra_id === obraId || e.obra_id === "*");
+  // Solo los eventos del período con cámara: los feriados de otros meses quedarían dibujados fuera del gráfico
+  const ev = eventos.filter((e) => (e.obra_id === obraId || e.obra_id === "*") && e.fecha >= inicioMonitoreo && e.fecha < finVentana);
   const susp = dias.filter((d) => d.suspendido);
   const inicioRacha = racha.length >= 5 ? d3.min(racha, (d) => d.fecha) : null;
   return grafico({
@@ -203,7 +208,8 @@ function lineaTiempo(width) {
     ]
   });
 }
-function lluvia(width) {
+async function lluvia(width) {
+  const {Plot, grafico} = await cargarGraficos();
   return grafico({
     width, height: 104, marginLeft: width < 560 ? 64 : 112, marginTop: 10, marginRight: 8, style: estiloPlot,
     x: {type: "utc", domain: [inicioMonitoreo, finVentana], label: null, tickFormat: fecha, ticks: width < 560 ? 4 : 8},
@@ -236,7 +242,7 @@ function tablaDias() {
 }
 ```
 
-<section class="pestana" id="p-actividad" role="tabpanel" aria-labelledby="t-actividad" hidden>
+<section class="pestana espera" id="p-actividad" role="tabpanel" aria-labelledby="t-actividad" hidden>
   <h2>¿Hubo trabajo en la obra?</h2>
   <p>Cada día del período con cámara (hasta 12 semanas), con los feriados, los eventos del contrato, los reportes ciudadanos y la lluvia.</p>
   ${leyendaEstados()}
@@ -253,7 +259,8 @@ function tablaDias() {
 
 ```js
 const NOMBRES = {previsto: "Previsto", reportado: "Reportado", pagado: "Pagado"};
-function contraste(width) {
+async function contraste(width) {
+  const {Plot, grafico} = await cargarGraficos();
   const s = serie.filter((d) => d.obra_id === obraId);
   const dominio = [ficha.fecha_inicio, d3.max(s, (d) => d.fecha)];
   const porSerie = (k) => s.filter((d) => d.serie === k).sort((a, b) => a.fecha - b.fecha);
@@ -280,7 +287,8 @@ function contraste(width) {
     ]
   });
 }
-function franjaSemanas(width) {
+async function franjaSemanas(width) {
+  const {Plot, grafico} = await cargarGraficos();
   const s = serie.filter((d) => d.obra_id === obraId);
   const dominio = [ficha.fecha_inicio, d3.max(s, (d) => d.fecha)];
   const datos = semanal.filter((d) => d.obra_id === obraId).map((d) => ({...d, estado: ESTADOS[d.estado_semana].label}));
@@ -307,7 +315,7 @@ const respuestaAvance = !conAvance ? null
   : `Sin diferencias que pasen su límite: reporta ${num(o.avance_reportado_pct)} % (el cronograma esperaba ${num(o.avance_previsto_pct)} %) y la cámara vio trabajo en ${num(100 * o.proporcion_semanas_activas, 0)} % de las últimas 12 semanas.`;
 ```
 
-<section class="pestana" id="p-avance" role="tabpanel" aria-labelledby="t-avance" hidden>
+<section class="pestana espera" id="p-avance" role="tabpanel" aria-labelledby="t-avance" hidden>
   <h2>¿Lo reportado coincide con lo que vio la cámara?</h2>
   ${respuestaAvance ? html`<p class="respuesta-corta">${respuestaAvance}</p>` : ""}
   <p>Avance previsto por el cronograma, avance reportado por la ejecutora y pagos, frente a la actividad observada cada semana.</p>
@@ -371,7 +379,7 @@ function filaFotos(dia, imagenes) {
 }
 ```
 
-<section class="pestana" id="p-fotos" role="tabpanel" aria-labelledby="t-fotos" hidden>
+<section class="pestana espera" id="p-fotos" role="tabpanel" aria-labelledby="t-fotos" hidden>
   <h2>¿Qué muestran las fotos?</h2>
   <p>${real ? "Fotos del día elegido con los objetos que etiquetaron personas en el piloto de dIAra. El 19 de marzo incluye las fotos reales, con las personas difuminadas." : "Cuatro fotos del día elegido, cerca de las 8, 10, 13 y 15 horas, con lo que detectó el modelo. Compárelas con otro día para ver qué cambió."}</p>
   <div class="selectores-fotos">${selectorDia}${selectorComparar}</div>
@@ -380,7 +388,7 @@ function filaFotos(dia, imagenes) {
   <p class="nota-tabla">Línea continua: persona. Línea punteada: maquinaria. ${real ? "Donde no hay foto publicada, los recuadros se dibujan sobre un marco vacío de 1280 por 1024 píxeles." : "Esta obra es simulada: no tiene fotos propias. Cada foto con actividad repite los objetos de una foto real del piloto de la misma hora, como los habría detectado el modelo, y se dibuja sobre un marco vacío."}</p>
   ${real ? "" : html`<details>
     <summary>Ver una foto real de una cámara de dIAra</summary>
-    <img src=${FOTOS["20240319-085919.jpg"].href} alt="Foto real de una cámara de dIAra durante el piloto: movimiento de tierras con una vagoneta, una aplanadora y un tractor; la persona visible está difuminada." style="max-width: 640px; width: 100%; border-radius: 4px; margin-top: 0.75rem;">
+    <img src=${FOTOS["20240319-085919.jpg"].href} loading="lazy" alt="Foto real de una cámara de dIAra durante el piloto: movimiento de tierras con una vagoneta, una aplanadora y un tractor; la persona visible está difuminada." style="max-width: 640px; width: 100%; border-radius: 4px; margin-top: 0.75rem;">
     <p class="nota-tabla">Foto 20240319-085919.jpg del repositorio público de dIAra (CGR, CENFOTEC y GIZ), piloto de 2024, con las personas difuminadas.</p>
   </details>`}
 </section>
@@ -464,7 +472,7 @@ function descargar() {
 }
 ```
 
-<section class="pestana registro" id="p-decision" role="tabpanel" aria-labelledby="t-decision" hidden>
+<section class="pestana registro espera" id="p-decision" role="tabpanel" aria-labelledby="t-decision" hidden>
   <h2>¿Qué hace con esta obra?</h2>
   <p>Este es el hallazgo preliminar, con sus cuatro atributos. LupIA llena lo que los datos permiten saber; la causa la determina usted con la ejecutora o en la visita.</p>
   <dl class="hallazgo">
@@ -525,7 +533,7 @@ function accionesReporte(r) {
 }
 ```
 
-<details class="reportar no-imprimir">
+<details class="reportar no-imprimir espera">
   <summary>Reportar un dato que no cuadra</summary>
   <p>LupIA no le deja cambiar datos, pero sí avisar a quien mantiene el registro. El reporte sale con la obra, la fecha de los datos y el enlace a esta ficha.</p>
   ${formReporte}

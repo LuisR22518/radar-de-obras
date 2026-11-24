@@ -44,6 +44,8 @@ const nReales = lista.filter(esReal).length;
 ```js
 // Encabezado: se dibuja cuando los datos están listos (sin marcadores de carga a medio llenar)
 document.getElementById("cargando")?.remove();
+// El mapa, la lista, la tabla y los detalles aparecen junto con el encabezado: así nada salta al cargar
+document.querySelectorAll(".espera").forEach((el) => el.classList.remove("espera"));
 display(html`<p class="aviso">Vista para fiscalizadores de la Contraloría. Datos al ${fechaTexto(resumen.fecha_corte)}. Prototipo académico: una obra usa datos reales del piloto de dIAra y las demás son simuladas a partir de ellos. <a href="./datos.html">Ver de dónde sale cada dato</a></p>
 <section class="inicio" aria-labelledby="titulo">
   <h1 id="titulo"><span class="marca marca-trazo">${plural(nRevisar, "obra necesita", "obras necesitan")} revisión</span></h1>
@@ -132,9 +134,9 @@ function descargarLista() {
 }
 ```
 
-<div class="tablero">
+<div class="tablero espera">
   <figure class="caja-mapa">
-    ${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 420), activo, enlace: (o) => `./obra.html?id=${o.obra_id}`}))}
+    <div class="mapa-espacio">${resize((width) => mapaObras(pais, lista, {width: Math.min(width, 420), activo, enlace: (o) => `./obra.html?id=${o.obra_id}`}))}</div>
     <figcaption>${leyendaObra()}</figcaption>
   </figure>
   <div class="caja-lista">
@@ -219,13 +221,13 @@ function tablaSenales(obras) {
 }
 ```
 
-<section class="comparar" aria-labelledby="t-comparar">
+<section class="comparar espera" aria-labelledby="t-comparar">
   <h2 id="t-comparar">Comparar las señales</h2>
   <p class="tenue">Ordene por cualquier columna tocando su nombre. El signo ! marca la señal que pasa su límite. Usa la misma búsqueda y los mismos filtros que la lista.</p>
   ${tablaSenales(visibles)}
 </section>
 
-<section class="mas" aria-label="Más detalles">
+<section class="mas espera" aria-label="Más detalles">
   <details class="panel">
     <summary>¿Cómo decide LupIA el orden?</summary>
     <div class="panel-cuerpo">

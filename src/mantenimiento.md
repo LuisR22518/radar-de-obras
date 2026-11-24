@@ -3,7 +3,7 @@ title: Mantenimiento del registro
 ---
 
 ```js
-import {fecha, fechaLarga, fechaTexto, plural} from "./components/lupia.js";
+import {fecha, fechaLarga, fechaTexto, plural, MESES} from "./components/lupia.js";
 const mantenimiento = await FileAttachment("data/mantenimiento.csv").csv({typed: true});
 const calidad = await FileAttachment("data/calidad.csv").csv({typed: true});
 const bitacora = await FileAttachment("data/bitacora.csv").csv({typed: true});
@@ -41,11 +41,16 @@ const pendientes = [
 ];
 const alDia = mantenimiento.filter((d) => d.al_dia).length;
 const cambios30 = bitacora.filter((d) => (corte - new Date(d.fecha_hora)) / 864e5 <= 30).length;
+// El resto de la página aparece de una vez, con sus datos: así nada salta al cargar
+document.getElementById("cargando")?.remove();
+document.querySelector(".espera-hijos")?.classList.remove("espera-hijos");
 ```
 
-<div class="lectura ancha">
+<div class="lectura ancha espera-hijos">
 
 # Mantenimiento del registro
+
+<p class="cargando" id="cargando">Cargando el registro…</p>
 
 <p class="bajada">Para la gerencia y los encargados de actualización de obra: qué hay que corregir o poner al día para que el auditor trabaje con datos confiables.</p>
 
@@ -139,11 +144,25 @@ ${tablaRoles()}
 ## Últimos cambios
 
 ```js
+// Fecha y hora del cambio (hora de Costa Rica, tal como la anota el registro)
+const dos = (n) => String(n).padStart(2, "0");
+const cuando = (t) => (t instanceof Date ? `${t.getDate()} ${MESES[t.getMonth()]} ${t.getFullYear()}, ${dos(t.getHours())}:${dos(t.getMinutes())}` : String(t ?? "—").slice(0, 16).replace("T", ", "));
+// Una dirección de foto se muestra por el nombre de su archivo, que es lo que la persona reconoce
+function legible(v) {
+  if (v == null || v === "") return "—";
+  if (v instanceof Date) return fechaLarga(v);
+  return String(v).replace(/https?:\/\/\S+/g, (u) => {
+    let archivo = u.split("/").pop();
+    try { archivo = decodeURIComponent(archivo); } catch {}
+    return `foto «${archivo.replace(/^\d+px-/, "").replaceAll("_", " ")}»`;
+  });
+}
 function tablaBitacora() {
   if (!bitacora.length) return html`<p class="tenue">Todavía no hay cambios desde la hoja. Cada cambio quedará aquí, con la fecha, quién lo hizo y el valor anterior.</p>`;
-  return html`<table class="tabla-datos" tabindex="0">
+  // En celular, cada cambio se lee como una ficha con sus etiquetas (igual que las otras tablas de esta página)
+  return html`<table class="tabla-datos apilada" tabindex="0">
     <thead><tr><th scope="col">Cuándo</th><th scope="col">Quién</th><th scope="col">Pestaña</th><th scope="col">Registro</th><th scope="col">Campo</th><th scope="col">Antes</th><th scope="col">Después</th></tr></thead>
-    <tbody>${bitacora.map((d) => html`<tr><td>${String(d.fecha_hora).slice(0, 16).replace("T", ", ")}</td><td>${d.responsable ?? "—"}</td><td>${d.tabla}</td><td>${d.clave}</td><td>${d.campo}</td><td>${d.antes ?? "—"}</td><td>${d.despues ?? "—"}</td></tr>`)}</tbody>
+    <tbody>${bitacora.map((d) => html`<tr><td data-et="Cuándo">${cuando(d.fecha_hora)}</td><td data-et="Quién">${d.responsable ?? "—"}</td><td data-et="Pestaña">${d.tabla}</td><td data-et="Registro">${legible(d.clave)}</td><td data-et="Campo">${d.campo}</td><td data-et="Antes">${legible(d.antes)}</td><td data-et="Después">${legible(d.despues)}</td></tr>`)}</tbody>
   </table>`;
 }
 ```

@@ -81,7 +81,14 @@ body {
   margin: 0 auto !important;
   padding: 0 2rem !important;
 }
-#observablehq-main { margin-top: 0; }
+/* El pie empieza fuera de la pantalla: así no «salta» mientras llegan los datos */
+#observablehq-main { margin-top: 0; min-height: 100vh; }
+/* Partes que se muestran solo cuando sus datos están listos (sin cajas vacías que luego se mueven) */
+.espera { display: none !important; }
+/* En las páginas de lectura, mientras tanto se ven solo el título y el aviso de carga */
+.espera-hijos > :not(h1):not(.cargando) { display: none !important; }
+/* El mapa reserva su lugar desde el inicio (su alto es el 82 % del ancho): la lista no se mueve al dibujarlo */
+.mapa-espacio { aspect-ratio: 100 / 82; max-width: var(--mapa-ancho, 420px); }
 @media (max-width: 640px) {
   #observablehq-center { padding: 0 1rem !important; }
 }
@@ -610,6 +617,10 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 @media (min-width: 641px) { .lectura.ancha .tabla-datos td:first-child { min-width: 9rem; } }
 .lectura table.tabla-datos td a { color: var(--tinta); }
 .tabla-datos { border-collapse: collapse; }
+/* Un valor largo se corta en varias líneas en vez de salirse de la página; en las páginas anchas,
+   las tablas usan todo el ancho de la tarjeta (no el de un párrafo) para no partir palabras */
+.tabla-datos td { overflow-wrap: break-word; }
+.lectura.ancha p:has(> .tabla-datos) { max-width: none; }
 @media (max-width: 640px) {
   .tabla-datos { display: block; overflow-x: auto; }
 }
@@ -624,7 +635,8 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 
 /* En celular, cada fila de una tabla «apilada» se lee como una ficha con su etiqueta */
 @media (max-width: 640px) {
-  table.apilada, .apilada tbody, .apilada tr, .apilada td { display: block; width: 100%; }
+  /* border-box: el margen para la etiqueta va dentro del ancho, así el texto no queda cortado a la derecha */
+  table.apilada, .apilada tbody, .apilada tr, .apilada td { display: block; width: 100%; box-sizing: border-box; }
   .apilada thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .lectura .apilada tr { padding: 0.75rem 0; border-bottom: 1px solid var(--linea); }
   .lectura .apilada td { position: relative; padding: 0.2rem 0 0.2rem 8.25rem; border: 0; min-height: 1.6em; }
@@ -636,6 +648,7 @@ details:not(.panel) summary { cursor: pointer; font-weight: 650; margin-top: 1re
 @media print {
   #observablehq-header, .pestanas, .no-imprimir, .ficha-barra, .herramientas { display: none !important; }
   .pestana[hidden] { display: block !important; }
+  #observablehq-main { min-height: 0; }
   .tarjeta, .pestana, .lectura, .panel { box-shadow: none; }
 }
 

@@ -13,11 +13,16 @@ const simuladas = fuentes.filter((d) => d.fuente_datos === "simulado");
 const registro = new Map(mantenimiento.map((d) => [d.obra_id, d]));
 const camara = new Map(fuentes.map((d) => [d.obra_id, d]));
 const hora = (t) => `${fechaTexto(String(t).slice(0, 10))}, a las ${String(t).slice(11, 16)}`;
+// El resto de la página aparece de una vez, con sus datos: así nada salta al cargar
+document.getElementById("cargando")?.remove();
+document.querySelector(".espera-hijos")?.classList.remove("espera-hijos");
 ```
 
-<div class="lectura">
+<div class="lectura espera-hijos">
 
 # De dónde salen los datos
+
+<p class="cargando" id="cargando">Cargando los datos…</p>
 
 <p class="bajada">Datos al ${fechaTexto(resumen.fecha_corte)}. El auditor solo consulta: ningún dato se cambia desde LupIA.</p>
 

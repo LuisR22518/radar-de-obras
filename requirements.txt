@@ -1,4 +1,4 @@
 pandas>=2.0
 numpy>=1.24
-pillow>=10.0  # solo para scripts/anonimizar_fotos.py
+pillow>=10.0  # fotos del piloto: difuminar personas y la miniatura de la portada
 openpyxl>=3.1  # leer la hoja del registro (.xlsx)
